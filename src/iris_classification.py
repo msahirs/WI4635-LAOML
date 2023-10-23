@@ -56,20 +56,29 @@ def split_data_rnd(dataset,fraction = 0.5):
 
     return train_X, train_y, test_X, test_y
 
+def train_clustering(train_data, train_outcome):
+
+    return np.linalg.solve(train_data.T @ train_data, train_data.T @ train_outcome)
+
+def cluster_dataset_test(train_X, train_y, test_X, test_y):
+    weight_vec = train_clustering(train_X, train_y)
+
+    results = test_X @ weight_vec
+
+    results_sign = np.sign(results)
+
+    no_correct = {np.sum(results_sign * test_y >0)}
+
+    return no_correct, results_sign, weight_vec
+
+
 iris_data_loc = './data/iris.csv' # File name of IRIS dataset
 
 data_array = extract_dataset(iris_data_loc)
 
 train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=0.5)
 
-weight_vec = np.linalg.solve(train_X.T @ train_X, train_X.T @ train_y)
-
-results = test_X @ weight_vec
-
-results_sign = np.sign(results)
-
-check = results_sign * test_y
-print(f"Number of Correctly classified Points: {np.sum(check>0)}")
+no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
 
 
 
