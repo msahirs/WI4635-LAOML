@@ -1,0 +1,227 @@
+\documentclass[11pt,noanswers]{exam}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{optidef}
+\usepackage{listings}
+\usepackage{courier}
+
+% macro to select a scaled-down version of Bera Mono (for instance)
+\usepackage{inconsolata} % very nice fixed-width font included with texlive-full
+\usepackage[usenames,dvipsnames]{color} % more flexible names for syntax highlighting colors
+\usepackage{listings}
+
+\lstset{
+basicstyle=\footnotesize\ttfamily, 
+columns=fullflexible, % make sure to use fixed-width font, CM typewriter is NOT fixed width
+numberstyle=\small\ttfamily\color{Gray},
+stepnumber=1,     
+columns=fixed,
+numbersep=10pt, 
+numberfirstline=true, 
+%backgroundcolor = \color{lightgray},
+numberblanklines=true, 
+tabsize=4,
+lineskip=-1.5pt,
+extendedchars=true,
+breaklines=true,        
+keywordstyle=\color{Blue}\bfseries,
+identifierstyle=, % using emph or index keywords
+commentstyle=\sffamily\color{OliveGreen},
+stringstyle=\color{Maroon},
+showstringspaces=false,
+showtabs=false,
+upquote=false,
+texcl=true % interpet comments as LaTeX
+}
+
+\lstdefinelanguage{julia}
+{
+  keywordsprefix=\@,
+  morekeywords={
+    exit,whos,edit,load,is,isa,isequal,typeof,tuple,ntuple,uid,hash,finalizer,convert,promote,
+    subtype,typemin,typemax,realmin,realmax,sizeof,eps,promote_type,method_exists,applicable,
+    invoke,dlopen,dlsym,system,error,throw,assert,new,Inf,Nan,pi,im,begin,while,for,in,return,
+    break,continue,macro,quote,let,if,elseif,else,try,catch,end,bitstype,ccall,do,using,module,
+    import,export,importall,baremodule,immutable,local,global,const,Bool,Int,Int8,Int16,Int32,
+    Int64,Uint,Uint8,Uint16,Uint32,Uint64,Float32,Float64,Complex64,Complex128,Any,Nothing,None,
+    function,type,typealias,abstract
+  },
+  sensitive=true,
+  morecomment=[l]{\#},
+  morestring=[b]',
+  morestring=[b]" 
+}
+
+
+
+\newcommand{\oE}{\mathbb E}
+\newcommand{\E}{\mathbb R}
+\newcommand{\Prob}{\mathbb P}
+\newcommand{\oN}{\mathbb N}
+\newcommand{\oZ}{\mathbb Z}
+\newcommand{\oQ}{\mathbb Q}
+\newcommand{\oR}{\mathbb R}
+\newcommand{\oC}{\mathbb C}
+\newcommand{\oF}{\mathbb F}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\R}{\mathbb R}
+\newcommand{\C}{\mathbb C}
+\newcommand{\F}{\mathbb F}
+\newcommand{\oS}{\mathbb S}
+
+\newcommand{\Rpsd}{{\oR_{\ge 0}}}
+\newcommand{\Spsd}{{\mathcal S}_{\succeq 0}}
+\newcommand{\Spd}{{\mathcal S}_{\succ 0}}
+
+\newcommand{\la}{\lambda}  % greek letters 
+\newcommand{\al}{\alpha}
+\newcommand{\be}{\beta}
+\newcommand{\ga}{\gamma}
+\newcommand{\de}{\delta}
+
+\newcommand{\sfT}{{\sf T}} % Transpose sign
+\newcommand{\lan}{\langle}
+\newcommand{\ran}{\rangle}
+\newcommand{\Tr}{\text{\rm Tr}} % trace 
+\newcommand{\rank}{{\text{\rm rank}}}
+
+\newcommand{\GL}{\mathsf{GL}}
+\newcommand{\BA}{{\mathfrak A}}
+\newcommand{\BB}{{\mathfrak B}}
+\newcommand{\BE}{{\mathfrak E}}
+\newcommand{\MA}{{\mathcal A}}
+\newcommand{\MB}{{\mathcal B}}
+\newcommand{\MC}{{\mathcal C}}
+\newcommand{\MD}{{\mathcal D}}
+\newcommand{\MF}{{\mathcal F}}
+\newcommand{\MG}{{\mathcal G}}
+\newcommand{\MH}{{\mathcal H}}
+\newcommand{\MM}{{\mathcal M}}
+\newcommand{\MN}{{\mathcal N}}
+\newcommand{\MI}{{\mathcal I}}
+\newcommand{\ML}{{\mathcal L}}
+\newcommand{\MS}{{\mathcal S}}
+\newcommand{\MP}{{\mathcal P}}
+\newcommand{\MT}{{\mathcal T}}
+\newcommand{\MV}{{\mathcal V}}
+\newcommand{\MW}{{\mathcal W}}
+\newcommand{\MO}{{\mathcal O}}
+\newcommand{\MK}{{\mathcal K}}
+\newcommand{\MZ}{{\mathcal Z}}
+\newcommand{\ds}{\displaystyle}
+\newcommand{\ME}{{\mathcal E}}
+
+\newcommand{\SC}{\mathbf \Delta}
+\newcommand{\gldz}{\GL_d(\Z)}   
+\newcommand{\gldq}{\GL_d(\Q)}  
+\newcommand{\gldr}{\GL_d(\R)}   
+\newcommand{\sd}{{\mathcal S}^d}
+\newcommand{\sdo}{{\mathcal S}^d_{>0}}
+\newcommand{\sdgeo}{{\mathcal S}^d_{\geq 0}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+%\renewcommand{\vec}[1]{\underline{\boldsymbol{#1}}}
+
+
+%\DeclareMathOperator{\trace}{trace}
+\newcommand{\trace}{{\text{\rm Tr}}}  %% new def of trace
+
+\DeclareMathOperator{\grad}{grad}
+\DeclareMathOperator{\vol}{vol}
+\DeclareMathOperator{\conv}{conv}
+\DeclareMathOperator{\cone}{cone}
+\DeclareMathOperator{\aff}{aff}
+\DeclareMathOperator{\lin}{lin}
+\DeclareMathOperator{\id}{id}
+\DeclareMathOperator{\dist}{dist}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\BR}{BR}
+\DeclareMathOperator{\CM}{CM}
+\DeclareMathOperator{\Del}{Del}
+\DeclareMathOperator{\vertex}{vert}
+\DeclareMathOperator{\Min}{Min}
+\DeclareMathOperator{\Gr}{Gr}
+\DeclareMathOperator{\Aut}{Aut}
+\DeclareMathOperator{\interior}{int}
+\DeclareMathOperator{\relint}{relint}
+\DeclareMathOperator{\ext}{ext}
+\DeclareMathOperator{\epi}{epi}
+\DeclareMathOperator{\sdp}{SDP}
+\DeclareMathOperator{\maxcut}{MAX CUT}
+\DeclareMathOperator{\sign}{sign}
+
+\newcommand{\COP}{\text{\rm COP}}
+\newcommand{\CP}{\text{\rm CP}}
+\newcommand{\DNN}{\text{\rm DNN}}
+
+%\usepackage{easyReview}
+
+\pagestyle{empty}
+
+\begin{document}
+\noindent\textsc{\Large LAOML 2023--2024\hfill Project 1}\\\hrule
+\vspace*{.5cm}
+
+
+The goal of this project is to practice implementing your own machine learning optimization routines and play around with different approaches/parameters to see what works well in practice for certain datasets. For this reason, you should not use any functions from machine learning packages such as scikit-learn. For your implementations, please use Python with basic functions from packages such as NumPy and SciPy, or Julia with basic packages such as LinearAlgebra. Please use the same programming language for the entire project. If you prefer, you can use another open-source language, but please consult with the lecturer(s) first.
+
+The project is designed for groups of three. Please collaborate on each question (as opposed to dividing the work). Please hand in your report as a PDF file. Include the code in easy-to-read listings (e.g., use the lstlisting environment in latex with syntax highlighting enabled and a small font to avoid too much line wrapping). Please also submit an additional text file containing a copy of all the code in your report. Use Brightspace to hand in the files. The hand-in date for this project is 17 November 2023.
+
+Write an informal report where you discuss the questions below (please use a subsection for each subquestion). Of course, we know that the algorithms mentioned in this project can be found online or can be partially generated using large language models. Please write your report in such a way that it becomes clear to the reader that you wrote your own version of the code and that you experimented with it yourself. For instance, when answering a question you can give different versions of the same function, where you write things such as ``We found that this version of the function was very slow due to the dense matrix operations; each iteration took 12 seconds. The following version of the function uses sparse linear algebra, where the iterations only take 0.8 seconds''. Also, whenever there are hyperparameters, discuss your experiences with tuning these. How did this affect the performance on the training and test sets, or how did it affect the runtime? In your answers discuss whether or not the results you see agree with your expectations.
+
+\begin{questions}
+\begin{question}
+
+The IRIS dataset is one of the oldest and most (over)used example data sets for classification; see the iris.csv file on Brightspace, which contains a part of this dataset.
+\begin{parts}
+\part Write your own function to extract the data matrix X and the outcome vector y from the data file. Note that the last column corresponds to the outcome vector y, where you could assign the species ``versicolor'' to $+1$ and ``virginica'' to $-1$.
+
+\part Write a function that splits the data into a training and test set according to some fraction  $0< f< 1$. Make sure to use randomization; that is, it should not be the case that the training set consists of the first data points and the test set of the remaining data points. Your function should return matrices $X_\mathrm{train}$ and $X_\mathrm{test}$ and vectors $y_\mathrm{train}$ and $y_\mathrm{test}$.
+
+\part Write a function that, given $X$, $y$, and a weight vector $w$ defining a hyperplane, returns the number of correctly classified points. Verify that the output makes sense for random weight vectors.
+
+\part Implement two functions for ordinary least squares regression with Tikhonov regularization: one using the QR factorization (for the QR factorization you may use a library function) and the other using gradient descent. Use this to train a weight vector on the training part of your dataset (you could start by splitting this 50/50). Should the answers obtained with QR factorization and gradient descent be the same? Verify whether this is the case. What is the impact of the regularization hyperparameter $\lambda$ on the classification performance on the test set? 
+%Use this to show that for this very simple example dataset, you do not need SVM: ordinary least squares regression with the right regularization is already good enough.
+
+\part Implement the perceptron. Since the full data set is not linearly separable, the algorithm will run indefinitely if we apply it to the full data set. If we use $f=0.2$, then depending on which data points are selected, the training set will sometimes be strictly linearly separable. How good is the performance on the test set in such cases? Compare this to the ordinary least squares approach from (d). 
+\end{parts}
+\end{question}
+
+\begin{question}
+The file url.mat\footnote{http://www.sysnet.ucsd.edu/projects/url/url.mat} contains several data sets (a data set for each of 120 days of collecting data), where each row corresponds to one URL. The columns correspond to various (about 30 million) features of the URLs and the web hosts corresponding to the URLs. Properties of the webpages the URLs link to are not part of the feature set. The data points are classified according to whether the resulting webpage is malicious or not. The goal is to decide, based on these features, whether a new URL is malicious without visiting any of the webpage it links to. 
+\begin{parts}
+\part Load the data set for the first day into a matrix $X$ and a vector $y$. If you use Python or Julia, you can use the code from Listing~\ref{lst1}~or~\ref{lst2}.
+\begin{lstlisting}[language=Python,caption=Python code, label=lst1]
+import scipy.io
+
+def parse_url(filename="url.mat", day=1):
+    v = scipy.io.loadmat(filename)[f'Day{day}']
+    X = v['data'][0][0]
+    y = [(-1)**v['labels'][0][0][k][0] for k in range(len(v['labels'][0][0]))]
+    return X, y
+\end{lstlisting}
+\begin{lstlisting}[language=Julia, caption=Julia code,label=lst2]
+using MAT
+
+function parse_url(filename="url.mat", day=1)
+	v = matread(filename)["Day$day"]
+	v["data"], (-1).^v["labels"]
+end
+\end{lstlisting}
+\part Implement subgradient descent for the Hinge-loss SVM as discussed in the lecture. Your function should take as arguments the data matrix $X$ and data vector $y$, the learning rate $\alpha$ (a good default value is $\alpha=0.001$), an integer $N$ indicating the number of gradient descent steps, and a regularization parameter $\lambda$. The function should return a weight vector $w$.
+
+Experiment with the hyperparameters, using dense and sparse linear algebra, on random splits of training and test data sets.
+
+Given for instance a 50/50 split between test and training data for the first day, what is the best classification performance you can obtain on the test set?
+
+\part Write a mini-batch version of the previous function. Instead of the integer $N$, the function takes a $\mathrm{batchsize}$ argument indicating the size of the mini-batches, and an $\mathrm{epochs}$ argument indicating the number of times each data point should be considered in total. A good default value for the regularization parameter is $\lambda = 1/\mathrm{epochs}$.
+
+\part Try training on a few days of data. Does the classification performance improve? Discuss how long you think it may take to train on the full 120 days of data with your code and hardware.
+\end{parts}
+\end{question}
+
+\end{questions}
+
+\end{document}
