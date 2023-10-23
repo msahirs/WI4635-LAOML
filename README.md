@@ -6,7 +6,7 @@ Repository containing code for the assignments in the course WI4635 - Linear Alg
 - IRIS and URL datasets under `/data`
     - **IRIS**: The dataset contains a set of 150 records under five attributes: sepal length, sepal width, petal length, petal width and species.
 
-    - **URL**: The file url.mat contains variables which we describe as follows:
+    - **URL**: A compressed archive (split into `.zip` volumes) containing a `.mat` file is stored, so you gotta manually extract the archive using WinRAR or similar (for storage purposes). The file url.mat contains variables.
 
         - **`FeatureTypes`**: A list of column indices for the data matrices that are real-valued features.
         - **`DayX`** (where X is an integer from 0 to 120): A struct containing the data for day X.
