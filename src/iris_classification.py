@@ -42,36 +42,98 @@ def extract_dataset(data_file : str) -> np.ndarray:
     # convert list of lists to ndarray of floats
     sample_data = np.array(sample_data, dtype=float)
 
+    # Returns as single nd array with last column as outcome
     return np.hstack((sample_data, outcome_vec[:,np.newaxis]))
 
 def split_data_rnd(dataset,fraction = 0.5):
 
-    train_size = int(dataset.shape[0] * fraction)
-    # test_size = dataset.shape[0] - train_size
+    """ Shuffles dataset and splits according to specified fraction
+
+    Parameters
+    ----------
+    dataset : NDArray
+        Array to shuffle. Array is shuffled along its first dimension, i.e.
+        rows are shuffled if input array is 2-D
+
+    fraction : float
+        Fraction of shuffled dataset to return as training data. Remaining is returned as testing
+
+    Returns
+    ----------
+        train_X : NDArray
+            Training data array, 2-D
+
+        train_y : NDArray
+            Training outcome vector, 1-D
+
+        test_X : NDArray
+            Testing data array, 2-D
+
+        test_y : NDArray
+            Testing outcome vector, 1-D
+    """    
+
+    train_size = int(dataset.shape[0] * fraction) # Convert fraction to no. of elements of training data
     
-    # shuffled_data = np.copy(dataset)
+    # shuffled_data = np.copy(dataset) # realised not needed cause python is call by value lol
 
-    np.random.shuffle(dataset)
+    np.random.shuffle(dataset) # N.B. In-place function!
 
+    # split shuffled data accoridng to fraction
     train_X , train_y = dataset[:train_size,:-1], dataset[:train_size,-1],
     test_X , test_y = dataset[train_size:,:-1], dataset[train_size:,-1],  
 
     return train_X, train_y, test_X, test_y
 
-def train_clustering(train_data, train_outcome):
 
-    return np.linalg.solve(train_data.T @ train_data, train_data.T @ train_outcome)
 
 def cluster_dataset_test(train_X, train_y, test_X, test_y):
+    """Uses linear regression to build a hyperplane based on input training data.
+    Provided test data and its outcome used as a means of testing and validation.
+
+
+    Parameters
+    ----------
+    train_X : NDArray
+        Training data array, 2-D
+
+    train_y : NDArray
+        Training outcome vector, 1-D
+
+    test_X : NDArray
+        Testing data array, 2-D
+
+    test_y : NDArray
+        Testing outcome vector, 1-D
+
+    Returns
+    ----------
+    no_correct : int
+        Number of correctly identified test entries
+    results_sign : NDArray
+        Vector containing classification output  
+    weight_vec : NDArray
+        Vector containing weights to define hyperplane
+    """    
+
+    # Solve least-squares weights in the most generic way using matrix_transposed-to-matrix product
+    def train_clustering(train_data, train_outcome):
+        return np.linalg.solve(train_data.T @ train_data, train_data.T @ train_outcome)
+    
+    # Call private lse function to get weights
     weight_vec = train_clustering(train_X, train_y)
 
+    # Get raw outcome vector
     results = test_X @ weight_vec
 
+    # Binary normalisation
     results_sign = np.sign(results)
 
+    # Number of correct is sum of the product ground truth signs and estimated signs
     no_correct = {np.sum(results_sign * test_y >0)}
-
+    
     return no_correct, results_sign, weight_vec
+    
 
 def tikhonov_qr_lse(A,b,reg_param = 1):
     n_param = A.shape[1]
@@ -85,8 +147,7 @@ def tikhonov_qr_lse(A,b,reg_param = 1):
 
     return np.linalg.solve(r,rhs)
 
-
-def test_1():
+def _test_1():
     # generate x and y
     x = np.linspace(0, 1, 101)
     y = 1 + x + x * np.random.random(len(x))
@@ -123,7 +184,7 @@ train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=0.5)
 
 no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
 
-test_1()
+_test_1()
 
 
 
