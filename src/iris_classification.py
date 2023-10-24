@@ -1,7 +1,9 @@
 import numpy as np
+from numpy.linalg import qr
 import scipy as sc
 import matplotlib.pyplot as plt
 import csv
+
 # Importing csv module
 
 
@@ -71,6 +73,47 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
 
     return no_correct, results_sign, weight_vec
 
+def tikhonov_qr_lse(A,b,reg_param = 1):
+    n_param = A.shape[1]
+
+    A_reg = np.vstack((A,np.sqrt(reg_param)*np.eye(n_param)))
+    b_reg = np.concatenate((b,np.zeros(n_param)))
+    
+    q, r = qr(A_reg)
+
+    rhs = q.T @ b_reg
+
+    return np.linalg.solve(r,rhs)
+
+
+def test_1():
+    # generate x and y
+    x = np.linspace(0, 1, 101)
+    y = 1 + x + x * np.random.random(len(x))
+
+    # assemble matrix A
+    A = np.vstack([x, np.ones(len(x))]).T
+
+    tik = tikhonov_qr_lse(A,y,reg_param=1)
+
+    print(tik)
+
+    # turn y into a column vector
+    y = y[:, np.newaxis]
+    alpha = np.dot((np.dot(np.linalg.inv(np.dot(A.T,A)),A.T)),y)
+    print(alpha)    
+
+    # plot the results
+    plt.figure(figsize = (10,8))
+    plt.plot(x, y, 'b.')
+    plt.plot(x, alpha[0]*x + alpha[1], 'r')
+    plt.plot(x, tik[0]*x + tik[1], 'g')
+
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.show()
+
 
 iris_data_loc = './data/iris.csv' # File name of IRIS dataset
 
@@ -79,6 +122,10 @@ data_array = extract_dataset(iris_data_loc)
 train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=0.5)
 
 no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
+
+test_1()
+
+
 
 
 
