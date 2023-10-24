@@ -6,7 +6,6 @@ import csv
 
 # Importing csv module
 
-
 def extract_dataset(data_file : str) -> np.ndarray: 
 
     """ Partitions IRIS data in CSV format into its data matrix and outcome vector
@@ -22,7 +21,7 @@ def extract_dataset(data_file : str) -> np.ndarray:
             Data matrix in cols [:-1], Outcome vector in col [-1]
     """
 
-    if iris_data_loc.split(".")[-1] != "csv":
+    if data_file.split(".")[-1] != "csv":
         raise ValueError("Not a .csv file. Exiting...")
     
     # Read CSV file and store into list of lists
@@ -91,7 +90,6 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     """Uses linear regression to build a hyperplane based on input training data.
     Provided test data and its outcome used as a means of testing and validation.
 
-
     Parameters
     ----------
     train_X : NDArray
@@ -110,8 +108,10 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     ----------
     no_correct : int
         Number of correctly identified test entries
+
     results_sign : NDArray
         Vector containing classification output  
+
     weight_vec : NDArray
         Vector containing weights to define hyperplane
     """    
@@ -136,18 +136,25 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     
 
 def tikhonov_qr_lse(A,b,reg_param = 1):
-    n_param = A.shape[1]
 
+    n_param = A.shape[1] # Get number of parameters
+
+    # Tikhonov regularisation for lse can essentially be implemented appending
+    # more rows to represent the L-2 norm term (per parameter)
     A_reg = np.vstack((A,np.sqrt(reg_param)*np.eye(n_param)))
     b_reg = np.concatenate((b,np.zeros(n_param)))
     
+    # Use lib routine from numpy to get QR factorisation
     q, r = qr(A_reg)
 
+    # Compute RHS of lse problem via QR
     rhs = q.T @ b_reg
 
+    # Solve and return solution of lse via qr
     return np.linalg.solve(r,rhs)
 
-def _test_1():
+
+def _test_1(): # Genreic lse
     # generate x and y
     x = np.linspace(0, 1, 101)
     y = 1 + x + x * np.random.random(len(x))
@@ -155,7 +162,8 @@ def _test_1():
     # assemble matrix A
     A = np.vstack([x, np.ones(len(x))]).T
 
-    tik = tikhonov_qr_lse(A,y,reg_param=1)
+    reg_param = 1
+    tik = tikhonov_qr_lse(A,y,reg_param=reg_param)
 
     print(tik)
 
@@ -167,24 +175,32 @@ def _test_1():
     # plot the results
     plt.figure(figsize = (10,8))
     plt.plot(x, y, 'b.')
-    plt.plot(x, alpha[0]*x + alpha[1], 'r')
-    plt.plot(x, tik[0]*x + tik[1], 'g')
+    plt.plot(x, alpha[0]*x + alpha[1], 'r', label = "Traditional LSE")
+    plt.plot(x, tik[0]*x + tik[1], 'g', label = f"QR LSE w/ Tikhonov ($\lambda = {reg_param}$)")
 
-
+    
     plt.xlabel('x')
     plt.ylabel('y')
+    plt.legend()
     plt.show()
 
+def main():
 
-iris_data_loc = './data/iris.csv' # File name of IRIS dataset
 
-data_array = extract_dataset(iris_data_loc)
+    iris_data_loc = './data/iris.csv' # File name of IRIS dataset
 
-train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=0.5)
+    data_array = extract_dataset(iris_data_loc)
 
-no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
+    train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=0.5)
 
-_test_1()
+    no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
+
+    _test_1()
+
+
+if __name__ == "__main__":
+    main()
+
 
 
 
