@@ -163,14 +163,14 @@ def linear_CG(A, b, x=None, epsilon = 1e-8):
     while True:
         
         if np.linalg.norm(res) <= epsilon:
-            return x # Return the minimizer x* and the function value f(x*)
+            return x # Return the minimizer x*
         
         D = A.dot(delta)
-        beta = -(res.dot(delta))/(delta.dot(D)) # Line (11) in the algorithm
+        beta = -(res.dot(delta))/(delta.dot(D)) 
         x = x + beta*delta # Generate the new iterate
 
         res = A.dot(x) - b # generate the new residual
-        chi = res.dot(D)/(delta.dot(D)) # Line (14) in the algorithm 
+        chi = res.dot(D)/(delta.dot(D)) 
         delta = chi*delta -  res # Generate the new descent direction
 
 
