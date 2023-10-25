@@ -85,7 +85,6 @@ def split_data_rnd(dataset,fraction = 0.5):
     return train_X, train_y, test_X, test_y
 
 
-
 def cluster_dataset_test(train_X, train_y, test_X, test_y):
     """Uses linear regression to build a hyperplane based on input training data.
     Provided test data and its outcome used as a means of testing and validation.
@@ -153,6 +152,27 @@ def tikhonov_qr_lse(A,b,reg_param = 1):
     # Solve and return solution of lse via qr
     return np.linalg.solve(r,rhs)
 
+def linear_CG(A, b, x=None, epsilon = 1e-8):
+   
+   if x is None:
+    x = np.ones(b.size)
+   
+    res = A.dot(x) - b # Initialize the residual
+    delta = -res # Initialize the descent direction
+    
+    while True:
+        
+        if np.linalg.norm(res) <= epsilon:
+            return x # Return the minimizer x* and the function value f(x*)
+        
+        D = A.dot(delta)
+        beta = -(res.dot(delta))/(delta.dot(D)) # Line (11) in the algorithm
+        x = x + beta*delta # Generate the new iterate
+
+        res = A.dot(x) - b # generate the new residual
+        chi = res.dot(D)/(delta.dot(D)) # Line (14) in the algorithm 
+        delta = chi*delta -  res # Generate the new descent direction
+
 
 def _test_1(): # Genreic lse
     # generate x and y
@@ -183,9 +203,15 @@ def _test_1(): # Genreic lse
     plt.ylabel('y')
     plt.legend()
     plt.show()
+def _test_2():
+    A = np.array([[-7, 1],
+                  [3, -3]])
+    
+    b = np.array([2,3])
+
+    print(linear_CG(A,b))
 
 def main():
-
 
     iris_data_loc = './data/iris.csv' # File name of IRIS dataset
 
@@ -195,7 +221,8 @@ def main():
 
     no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
 
-    _test_1()
+    # _test_1()
+    _test_2()
 
 
 if __name__ == "__main__":
