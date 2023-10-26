@@ -4,6 +4,21 @@ import scipy as sc
 import matplotlib.pyplot as plt
 import csv
 
+from functools import wraps
+from timeit import default_timer
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = default_timer()
+        result = f(*args, **kw)
+        te = default_timer()
+        print('func:%r took: %.8f ms' % \
+          (f.__name__, (te-ts) * 1000))
+        return result
+    return wrap
+
+
 # Importing csv module
 
 def extract_dataset(data_file : str) -> np.ndarray: 
@@ -131,10 +146,12 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     no_correct = {np.sum(results_sign * test_y >0)}
     
     return no_correct, results_sign, weight_vec
-    
+
+@timing  
 def generic_lse(train_data, train_outcome): # Does not use matrix inverse, but direct linear system solve
         return np.linalg.solve(train_data.T @ train_data, train_data.T @ train_outcome)
-    
+
+@timing    
 def tikhonov_qr_lse(A, b,reg_param = 1):
 
     n_param = A.shape[1] # Get number of parameters
@@ -174,6 +191,7 @@ def linear_CG(A, b, x = None, epsilon = 1e-8):
         chi = res.dot(D)/(delta.dot(D)) 
         delta = chi*delta -  res # Generate the new descent direction
 
+@timing
 def tikhonov_cg_lse(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
 
     n_param = data.shape[1] # Get number of parameters
@@ -188,10 +206,11 @@ def tikhonov_cg_lse(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
 
     return linear_CG(lse_lhs, lse_rhs, x = x, epsilon = epsilon)
 
-def _test_1(): # Genreic lse vs qr factorisation + tikhonov vs CG + tikhonov test
+@timing
+def _test_1(plot = True): # Genreic lse vs qr factorisation + tikhonov vs CG + tikhonov test
     # generate data and outcome
 
-    N_data_pts = 1000
+    N_data_pts = 100000
 
     data = np.linspace(0, 1, N_data_pts)
     outcome = 10 + data + data * np.random.random(data.size)
@@ -212,33 +231,35 @@ def _test_1(): # Genreic lse vs qr factorisation + tikhonov vs CG + tikhonov tes
     tik_cg_weights = tikhonov_cg_lse(A, outcome, reg_param = reg_param)
 
     # plot the results
-    plt.figure(figsize = (10, 8))
+    if plot == True:
+    
+        plt.figure(figsize = (10, 8))
 
-    plt.scatter(data, outcome,
-              color= 'b',
-              label = "Input Data",
-              marker = '.')  # Raw data plot
-    
-    plt.plot(data, generic_weights[0]*data + generic_weights[1],
-             color = 'orange',
-             label = "Traditional LSE",
-             marker = 'X', markersize = 3) # lse using direct solve (w/o inversion)
+        plt.scatter(data, outcome,
+                color= 'b',
+                label = "Input Data",
+                marker = '.')  # Raw data plot
+        
+        plt.plot(data, generic_weights[0]*data + generic_weights[1],
+                color = 'orange',
+                label = "Traditional LSE",
+                marker = 'X', markersize = 3) # lse using direct solve (w/o inversion)
 
-    plt.plot(data, tik_qr_weights[0]*data + tik_qr_weights[1],
-             'g',
-             label = f"QR LSE w/ Tikhonov ($\lambda = {reg_param}$)",
-             marker = 'o', markersize = 3) # using qr factorisation w/ tikhonov l2 regularisation
-    
-    plt.plot(data, tik_cg_weights[0]*data + tik_cg_weights[1],
-             color = 'black', alpha = 0.5,
-             label = f"CG LSE w/ Tikhonov ($\lambda = {reg_param}$)",
-             marker = '*', markersize = 5,
-             linestyle = "--") # using qr factorisation w/ tikhonov l2 regularisation
-    
-    plt.xlabel('Input data $x$')
-    plt.ylabel('Outcome $y$')
-    plt.legend()
-    plt.show()
+        plt.plot(data, tik_qr_weights[0]*data + tik_qr_weights[1],
+                'g',
+                label = f"QR LSE w/ Tikhonov ($\lambda = {reg_param}$)",
+                marker = 'o', markersize = 3) # using qr factorisation w/ tikhonov l2 regularisation
+        
+        plt.plot(data, tik_cg_weights[0]*data + tik_cg_weights[1],
+                color = 'black', alpha = 0.5,
+                label = f"CG LSE w/ Tikhonov ($\lambda = {reg_param}$)",
+                marker = '*', markersize = 5,
+                linestyle = "--") # using qr factorisation w/ tikhonov l2 regularisation
+        
+        plt.xlabel('Input data $x$')
+        plt.ylabel('Outcome $y$')
+        plt.legend()
+        plt.show()
 
 def _test_2(): # test to check cg function for solving system of equations
     A = np.array([[-7, 1],
@@ -261,8 +282,8 @@ def main():
 
     no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
 
-    _test_1()
-    _test_2()
+    _test_1(plot = False)
+    # _test_2()
 
 
 if __name__ == "__main__":
