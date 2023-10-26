@@ -84,7 +84,6 @@ def split_data_rnd(dataset,fraction = 0.5):
 
     return train_X, train_y, test_X, test_y
 
-
 def cluster_dataset_test(train_X, train_y, test_X, test_y):
     """Uses linear regression to build a hyperplane based on input training data.
     Provided test data and its outcome used as a means of testing and validation.
@@ -133,7 +132,9 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     
     return no_correct, results_sign, weight_vec
     
-
+def generic_lse(train_data, train_outcome):
+        return np.linalg.solve(train_data.T @ train_data, train_data.T @ train_outcome)
+    
 def tikhonov_qr_lse(A,b,reg_param = 1):
 
     n_param = A.shape[1] # Get number of parameters
@@ -173,8 +174,9 @@ def linear_CG(A, b, x=None, epsilon = 1e-8):
         chi = res.dot(D)/(delta.dot(D)) 
         delta = chi*delta -  res # Generate the new descent direction
 
+def tikhonov_cg_lse(data, outcome, x=None, epsilon = 1e-8): pass
 
-def _test_1(): # Genreic lse
+def _test_1(): # Genreic lse vs qr factorisation + tikhonov vs CG + tikhonov test
     # generate x and y
     x = np.linspace(0, 1, 101)
     y = 1 + x + x * np.random.random(len(x))
@@ -182,34 +184,46 @@ def _test_1(): # Genreic lse
     # assemble matrix A
     A = np.vstack([x, np.ones(len(x))]).T
 
-    reg_param = 1
+    reg_param = 1e-5
     tik = tikhonov_qr_lse(A,y,reg_param=reg_param)
 
-    print(tik)
+    # print(tik)
 
     # turn y into a column vector
     y = y[:, np.newaxis]
-    alpha = np.dot((np.dot(np.linalg.inv(np.dot(A.T,A)),A.T)),y)
-    print(alpha)    
+    alpha = generic_lse(A, y)
+    # print(alpha)    
 
     # plot the results
     plt.figure(figsize = (10,8))
-    plt.plot(x, y, 'b.')
-    plt.plot(x, alpha[0]*x + alpha[1], 'r', label = "Traditional LSE")
-    plt.plot(x, tik[0]*x + tik[1], 'g', label = f"QR LSE w/ Tikhonov ($\lambda = {reg_param}$)")
-
+    
+    plt.plot(x, y,
+              'b.',
+              label = "Input Data")
+    plt.plot(x, alpha[0]*x + alpha[1],
+             'r',
+             label = "Traditional LSE",
+             marker = 'x')
+    plt.plot(x, tik[0]*x + tik[1],
+             'g',
+             label = f"QR LSE w/ Tikhonov ($\lambda = {reg_param}$)",
+             marker = 'o', markersize = 1)
     
     plt.xlabel('x')
     plt.ylabel('y')
     plt.legend()
     plt.show()
-def _test_2():
+
+def _test_2(): # test to check cg function for solving system of equations
     A = np.array([[-7, 1],
                   [3, -3]])
     
     b = np.array([2,3])
 
     print(linear_CG(A,b))
+
+def _test_3(): # test to solve 
+    pass
 
 def main():
 
@@ -221,7 +235,7 @@ def main():
 
     no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
 
-    # _test_1()
+    _test_1()
     _test_2()
 
 
