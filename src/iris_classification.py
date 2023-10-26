@@ -44,7 +44,7 @@ def extract_dataset(data_file : str) -> np.ndarray:
     # Returns as single nd array with last column as outcome
     return np.hstack((sample_data, outcome_vec[:,np.newaxis]))
 
-def split_data_rnd(dataset,fraction = 0.5):
+def split_data_rnd(dataset, fraction = 0.5):
 
     """ Shuffles dataset and splits according to specified fraction
 
@@ -132,17 +132,17 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     
     return no_correct, results_sign, weight_vec
     
-def generic_lse(train_data, train_outcome):
+def generic_lse(train_data, train_outcome): # Does not use matrix inverse, but direct linear system solve
         return np.linalg.solve(train_data.T @ train_data, train_data.T @ train_outcome)
     
-def tikhonov_qr_lse(A,b,reg_param = 1):
+def tikhonov_qr_lse(A, b,reg_param = 1):
 
     n_param = A.shape[1] # Get number of parameters
 
     # Tikhonov regularisation for lse can essentially be implemented appending
     # more rows to represent the L-2 norm term (per parameter)
-    A_reg = np.vstack((A,np.sqrt(reg_param)*np.eye(n_param)))
-    b_reg = np.concatenate((b,np.zeros(n_param)))
+    A_reg = np.vstack((A, np.sqrt(reg_param) * np.eye(n_param)))
+    b_reg = np.concatenate((b, np.zeros(n_param)))
     
     # Use lib routine from numpy to get QR factorisation
     q, r = qr(A_reg)
@@ -151,9 +151,9 @@ def tikhonov_qr_lse(A,b,reg_param = 1):
     rhs = q.T @ b_reg
 
     # Solve and return solution of lse via qr
-    return np.linalg.solve(r,rhs)
+    return np.linalg.solve(r, rhs)
 
-def linear_CG(A, b, x=None, epsilon = 1e-8):
+def linear_CG(A, b, x = None, epsilon = 1e-8):
    
    if x is None:
     x = np.ones(b.size)
@@ -174,43 +174,69 @@ def linear_CG(A, b, x=None, epsilon = 1e-8):
         chi = res.dot(D)/(delta.dot(D)) 
         delta = chi*delta -  res # Generate the new descent direction
 
-def tikhonov_cg_lse(data, outcome, x=None, epsilon = 1e-8): pass
+def tikhonov_cg_lse(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
+
+    n_param = data.shape[1] # Get number of parameters
+
+    # Tikhonov regularisation for lse can essentially be implemented appending
+    # more rows to represent the L-2 norm term (per parameter)
+    A_reg = np.vstack((data, np.sqrt(reg_param) * np.eye(n_param)))
+    b_reg = np.concatenate((outcome, np.zeros(n_param)))
+
+    lse_lhs = A_reg.T @ A_reg
+    lse_rhs = A_reg.T @ b_reg
+
+    return linear_CG(lse_lhs, lse_rhs, x = x, epsilon = epsilon)
 
 def _test_1(): # Genreic lse vs qr factorisation + tikhonov vs CG + tikhonov test
-    # generate x and y
-    x = np.linspace(0, 1, 101)
-    y = 1 + x + x * np.random.random(len(x))
+    # generate data and outcome
+
+    N_data_pts = 1000
+
+    data = np.linspace(0, 1, N_data_pts)
+    outcome = 10 + data + data * np.random.random(data.size)
 
     # assemble matrix A
-    A = np.vstack([x, np.ones(len(x))]).T
+    A = np.vstack([data, np.ones((data.size))]).T
 
-    reg_param = 1e-5
-    tik = tikhonov_qr_lse(A,y,reg_param=reg_param)
+    reg_param = 1e-5 # Set prefactor for norm term in tikhonov reguularisation
 
-    # print(tik)
+    # Use QR + Tikhonov Reg function
+    tik_qr_weights = tikhonov_qr_lse(A, outcome, reg_param = reg_param)
 
-    # turn y into a column vector
-    y = y[:, np.newaxis]
-    alpha = generic_lse(A, y)
+    # Use generic LSE function
+    generic_weights = generic_lse(A, outcome)
     # print(alpha)    
 
+    # Use CG + Tikhonov Reg function
+    tik_cg_weights = tikhonov_cg_lse(A, outcome, reg_param = reg_param)
+
     # plot the results
-    plt.figure(figsize = (10,8))
+    plt.figure(figsize = (10, 8))
+
+    plt.scatter(data, outcome,
+              color= 'b',
+              label = "Input Data",
+              marker = '.')  # Raw data plot
     
-    plt.plot(x, y,
-              'b.',
-              label = "Input Data")
-    plt.plot(x, alpha[0]*x + alpha[1],
-             'r',
+    plt.plot(data, generic_weights[0]*data + generic_weights[1],
+             color = 'orange',
              label = "Traditional LSE",
-             marker = 'x')
-    plt.plot(x, tik[0]*x + tik[1],
+             marker = 'X', markersize = 3) # lse using direct solve (w/o inversion)
+
+    plt.plot(data, tik_qr_weights[0]*data + tik_qr_weights[1],
              'g',
              label = f"QR LSE w/ Tikhonov ($\lambda = {reg_param}$)",
-             marker = 'o', markersize = 1)
+             marker = 'o', markersize = 3) # using qr factorisation w/ tikhonov l2 regularisation
     
-    plt.xlabel('x')
-    plt.ylabel('y')
+    plt.plot(data, tik_cg_weights[0]*data + tik_cg_weights[1],
+             color = 'black', alpha = 0.5,
+             label = f"CG LSE w/ Tikhonov ($\lambda = {reg_param}$)",
+             marker = '*', markersize = 5,
+             linestyle = "--") # using qr factorisation w/ tikhonov l2 regularisation
+    
+    plt.xlabel('Input data $x$')
+    plt.ylabel('Outcome $y$')
     plt.legend()
     plt.show()
 
