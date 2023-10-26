@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.linalg import qr
-import scipy as sc
 import matplotlib.pyplot as plt
 import csv
 
@@ -261,7 +260,7 @@ def _test_1(plot = True): # Genreic lse vs qr factorisation + tikhonov vs CG + t
         plt.legend()
         plt.show()
 
-def _test_2(): # test to check cg function for solving system of equations
+def _test_2(): # test to check CG function for solving system of equations
     A = np.array([[-7, 1],
                   [3, -3]])
     
@@ -269,7 +268,7 @@ def _test_2(): # test to check cg function for solving system of equations
 
     print(linear_CG(A,b))
 
-def _test_3(): # test to solve 
+def _test_3(): # TODO: test for  matrices of high condition numbers. Good check for regularisation
     pass
 
 def main():
