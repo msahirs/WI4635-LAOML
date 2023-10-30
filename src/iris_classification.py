@@ -129,6 +129,7 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     """    
 
     # Solve least-squares weights in the most generic way using matrix_transposed-to-matrix product
+    @timing
     def train_clustering(train_data, train_outcome):
         return np.linalg.solve(train_data.T @ train_data, train_data.T @ train_outcome)
     
@@ -217,7 +218,7 @@ def _test_1(plot = True): # Genreic lse vs qr factorisation + tikhonov vs CG + t
     # assemble matrix A
     A = np.vstack([data, np.ones((data.size))]).T
 
-    reg_param = 1e-5 # Set prefactor for norm term in tikhonov reguularisation
+    reg_param = 1e-0 # Set prefactor for norm term in tikhonov reguularisation
 
     # Use QR + Tikhonov Reg function
     tik_qr_weights = tikhonov_qr_lse(A, outcome, reg_param = reg_param)
@@ -235,7 +236,7 @@ def _test_1(plot = True): # Genreic lse vs qr factorisation + tikhonov vs CG + t
         plt.figure(figsize = (10, 8))
 
         plt.scatter(data, outcome,
-                color= 'b',
+                color= 'b', alpha = 0.025,
                 label = "Input Data",
                 marker = '.')  # Raw data plot
         
@@ -268,7 +269,7 @@ def _test_2(): # test to check CG function for solving system of equations
 
     print(linear_CG(A,b))
 
-def _test_3(): # TODO: test for  matrices of high condition numbers. Good check for regularisation
+def _test_3(): # TODO: test for matrices of high condition numbers. Good check for regularisation
     pass
 
 def main():
@@ -281,7 +282,22 @@ def main():
 
     no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
 
-    _test_1(plot = False)
+    reg = 1e-0
+    w_cg = tikhonov_cg_lse(train_X,train_y, reg_param= reg)
+    w_qr = tikhonov_qr_lse(train_X,train_y, reg_param= reg)
+
+    print("Weights of cg:", w_cg)
+    print("Weights of qr:", w_qr)
+    print("Weights of hyperplane clustering:", weight_vec)
+
+    x = [i for i in range(w_cg.size)]
+    plt.plot(x, w_cg ,label = "cg", marker = 'x', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_qr, label = "qr", marker = 'o', alpha = 0.8,linestyle = '--')
+    plt.plot(x, weight_vec, label = "hyperplane", marker = '^', alpha = 0.8,linestyle = '--')
+    plt.legend()
+    plt.show()
+
+    # _test_1(plot = False)
     # _test_2()
 
 
