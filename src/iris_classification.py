@@ -136,16 +136,13 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     # Call private lse function to get weights
     weight_vec = train_clustering(train_X, train_y)
 
-    # Get raw outcome vector
-    results = test_X @ weight_vec
-
-    # Binary normalisation
-    results_sign = np.sign(results)
-
-    # Number of correct is sum of the product ground truth signs and estimated signs
-    no_correct = {np.sum(results_sign * test_y >0)}
+    no_correct = calculate_correct(test_X, test_y, weight_vec)
     
-    return no_correct, results_sign, weight_vec
+    return no_correct, weight_vec
+
+# Number of correct is sum of the product ground truth signs and estimated signs
+def calculate_correct(X, y, w):
+    return ((X @ w * y) > 0).sum()
 
 @timing  
 def generic_lse(train_data, train_outcome): # Does not use matrix inverse, but direct linear system solve
@@ -172,8 +169,8 @@ def tikhonov_qr_lse(A, b,reg_param = 1):
 
 def linear_CG(A, b, x = None, epsilon = 1e-8):
    
-   if x is None:
-    x = np.ones(b.size)
+    if x is None:
+        x = np.ones(b.size)
    
     res = A.dot(x) - b # Initialize the residual
     delta = -res # Initialize the descent direction
@@ -191,6 +188,37 @@ def linear_CG(A, b, x = None, epsilon = 1e-8):
         chi = res.dot(D)/(delta.dot(D)) 
         delta = chi*delta -  res # Generate the new descent direction
 
+def bold_driver_GD(obj_f, grad_f, x, epsilon= 1e-8, alpha=0.005, max_iter=100_000):
+    obj_prev = obj_f(x)
+    mult = 1
+    for _ in range(max_iter):
+        a_t = alpha * mult * grad_f(x)
+        x -= a_t
+        if np.sqrt((a_t**2).sum()) < epsilon:break
+
+        obj_now = obj_f(x)
+        if obj_now < obj_prev:
+            mult *= 1.05
+        else:
+            mult *= 0.5 
+        obj_prev = obj_now
+    return x
+
+@timing
+def tikhonov_bold_driver(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
+    X_gram = data.T @ data
+    Xy = data.T @ outcome
+    y_2 = outcome.T @ outcome
+    if x==None:
+        x = np.ones(data.shape[1])
+    
+    def grad_f(w):
+        return (X_gram + reg_param * np.eye(data.shape[1])) @ w - Xy
+    def obj_f(w):
+        return w.T @ X_gram @ w - w.T @ Xy - Xy.T @ w + y_2 + w.T @ w
+
+    return bold_driver_GD(obj_f, grad_f, x = x, epsilon = epsilon)
+
 @timing
 def tikhonov_cg_lse(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
 
@@ -205,6 +233,22 @@ def tikhonov_cg_lse(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
     lse_rhs = A_reg.T @ b_reg
 
     return linear_CG(lse_lhs, lse_rhs, x = x, epsilon = epsilon)
+
+@timing
+def perceptron(X_train, y_train, M_iter=500):
+    x = np.ones(X_train.shape[1])
+    i = 0
+    status = (X_train @ x * y_train <= 0)
+    while np.any(status) and i < M_iter:
+        for idx, _ in filter(lambda x: x[1], enumerate(status)):
+            x = x + y_train[idx] * X_train[idx]
+        # x = x / np.linalg.norm(x)
+        status = (X_train @ x * y_train <= 0)
+        i += 1
+
+    if i == M_iter:
+        print("Did not exit early, data might not be linearly seperable")
+    return x
 
 @timing
 def _test_1(plot = True): # Genreic lse vs qr factorisation + tikhonov vs CG + tikhonov test
@@ -278,17 +322,26 @@ def main():
 
     data_array = extract_dataset(iris_data_loc)
 
-    train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=0.5)
+    train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=0.2)
 
-    no_correct, results_sign, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
+    no_correct, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
 
     reg = 1e-0
     w_cg = tikhonov_cg_lse(train_X,train_y, reg_param= reg)
     w_qr = tikhonov_qr_lse(train_X,train_y, reg_param= reg)
+    w_bd = tikhonov_bold_driver(train_X, train_y, reg_param=reg)
+    w_pt = perceptron(train_X, train_y)
 
     print("Weights of cg:", w_cg)
+    print("Number correct", calculate_correct(test_X, test_y, w_cg))
     print("Weights of qr:", w_qr)
+    print("Number correct", calculate_correct(test_X, test_y, w_qr))
+    print("weights of bd:", w_bd)
+    print("Number correct", calculate_correct(test_X, test_y, w_bd))
+    print("weights of pt", w_pt)
+    print("Number correct", calculate_correct(test_X, test_y, w_pt))
     print("Weights of hyperplane clustering:", weight_vec)
+    print("Number correct", calculate_correct(test_X, test_y, weight_vec))
 
     x = [i for i in range(w_cg.size)]
     plt.plot(x, w_cg ,label = "cg", marker = 'x', alpha = 0.8, linestyle = '--')
