@@ -7,6 +7,20 @@ from functools import wraps
 from timeit import default_timer
 
 def timing(f):
+    """Decorator function for timing. Prints time elapsed from call to return
+
+    Parameters
+    ----------
+    f : function_object
+        Input function 
+
+    Returns
+    -------
+        str
+            Debug-like statement displaying function name and time elapsed
+            in milliseconds (ms)
+        
+    """
     @wraps(f)
     def wrap(*args, **kw):
         ts = default_timer()
@@ -42,7 +56,7 @@ def extract_dataset(data_file : str) -> np.ndarray:
     with open(data_file, "r") as x:
         sample_data = list(csv.reader(x, delimiter=","))
 
-    headers = sample_data[0] # Store headers for convenience
+    headers = sample_data[0] # Store headers for convenience, if needed
     sample_data.pop(0) # Remove header list
 
     # versicolor gets assigned 1 and virginica -1
@@ -169,6 +183,7 @@ def tikhonov_qr_lse(A, b,reg_param = 1):
 
 def linear_CG(A, b, x = None, epsilon = 1e-8):
    
+   # If no initial starting point is given, init with ones
     if x is None:
         x = np.ones(b.size)
    
@@ -206,9 +221,11 @@ def bold_driver_GD(obj_f, grad_f, x, epsilon= 1e-8, alpha=0.005, max_iter=100_00
 
 @timing
 def tikhonov_bold_driver(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
+
     X_gram = data.T @ data
     Xy = data.T @ outcome
     y_2 = outcome.T @ outcome
+
     if x==None:
         x = np.ones(data.shape[1])
     
@@ -236,9 +253,11 @@ def tikhonov_cg_lse(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
 
 @timing
 def perceptron(X_train, y_train, M_iter=500):
+
     x = np.ones(X_train.shape[1])
     i = 0
     status = (X_train @ x * y_train <= 0)
+
     while np.any(status) and i < M_iter:
         for idx, _ in filter(lambda x: x[1], enumerate(status)):
             x = x + y_train[idx] * X_train[idx]
@@ -252,8 +271,8 @@ def perceptron(X_train, y_train, M_iter=500):
 
 @timing
 def _test_1(plot = True): # Genreic lse vs qr factorisation + tikhonov vs CG + tikhonov test
-    # generate data and outcome
 
+    # generate data and outcome
     N_data_pts = 100000
 
     data = np.linspace(0, 1, N_data_pts)
@@ -325,9 +344,9 @@ def main():
     fraction = 0.5
     train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=fraction)
 
-    no_correct, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
-
     reg = 1e-1
+
+    no_correct, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
     w_cg = tikhonov_cg_lse(train_X,train_y, reg_param= reg)
     w_qr = tikhonov_qr_lse(train_X,train_y, reg_param= reg)
     w_bd = tikhonov_bold_driver(train_X, train_y, reg_param=reg)
@@ -346,11 +365,17 @@ def main():
     print("Number correct", calculate_correct(test_X, test_y, weight_vec))
 
     x = [i for i in range(w_cg.size)]
-    plt.plot(x, w_cg ,label = f"cg ($\lambda = {reg}$)", marker = 'x', alpha = 0.8, linestyle = '--')
-    plt.plot(x, w_qr, label = f"qr ($\lambda = {reg}$)", marker = 'o', alpha = 0.8,linestyle = '--')
-    plt.plot(x, weight_vec, label = "hyperplane", marker = '^', alpha = 0.8,linestyle = '--')
-    plt.plot(x, w_bd, label = f"bold driver ($\lambda = {reg}$)", marker = '>', alpha = 0.8,linestyle = '--')
-    plt.plot(x, w_pt_normalised, label = "perceptron (normalised)", marker = '<', alpha = 0.8,linestyle = '--')
+
+    plt.plot(x, w_cg , label = f"cg ($\lambda = {reg}$)",
+             marker = 'x', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_qr, label = f"qr ($\lambda = {reg}$)",
+             marker = 'o', alpha = 0.8, linestyle = '--')
+    plt.plot(x, weight_vec, label = "hyperplane",
+             marker = '^', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_bd, label = f"bold driver ($\lambda = {reg}$)",
+             marker = '>', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_pt_normalised, label = "perceptron (normalised)",
+             marker = '<', alpha = 0.8, linestyle = '--')
 
     plt.title("Comparision with fraction %.2f of input data" % fraction)
     plt.legend()
@@ -358,7 +383,6 @@ def main():
 
     # _test_1(plot = False)
     # _test_2()
-
 
 if __name__ == "__main__":
     main()
