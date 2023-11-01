@@ -322,15 +322,17 @@ def main():
 
     data_array = extract_dataset(iris_data_loc)
 
-    train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=0.2)
+    fraction = 0.5
+    train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=fraction)
 
     no_correct, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
 
-    reg = 1e-0
+    reg = 1e-1
     w_cg = tikhonov_cg_lse(train_X,train_y, reg_param= reg)
     w_qr = tikhonov_qr_lse(train_X,train_y, reg_param= reg)
     w_bd = tikhonov_bold_driver(train_X, train_y, reg_param=reg)
     w_pt = perceptron(train_X, train_y)
+    w_pt_normalised = w_pt/np.linalg.norm(w_pt)
 
     print("Weights of cg:", w_cg)
     print("Number correct", calculate_correct(test_X, test_y, w_cg))
@@ -344,9 +346,13 @@ def main():
     print("Number correct", calculate_correct(test_X, test_y, weight_vec))
 
     x = [i for i in range(w_cg.size)]
-    plt.plot(x, w_cg ,label = "cg", marker = 'x', alpha = 0.8, linestyle = '--')
-    plt.plot(x, w_qr, label = "qr", marker = 'o', alpha = 0.8,linestyle = '--')
+    plt.plot(x, w_cg ,label = f"cg ($\lambda = {reg}$)", marker = 'x', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_qr, label = f"qr ($\lambda = {reg}$)", marker = 'o', alpha = 0.8,linestyle = '--')
     plt.plot(x, weight_vec, label = "hyperplane", marker = '^', alpha = 0.8,linestyle = '--')
+    plt.plot(x, w_bd, label = f"bold driver ($\lambda = {reg}$)", marker = '>', alpha = 0.8,linestyle = '--')
+    plt.plot(x, w_pt_normalised, label = "perceptron (normalised)", marker = '<', alpha = 0.8,linestyle = '--')
+
+    plt.title("Comparision with fraction %.2f of input data" % fraction)
     plt.legend()
     plt.show()
 
