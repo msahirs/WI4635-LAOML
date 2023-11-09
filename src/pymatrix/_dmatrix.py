@@ -49,7 +49,7 @@ class DMatrix(LogicCore):
     """
     def __init__(self, data=None, dtype=None):
         self._format = "dmat"
-        if not data:
+        if data is None:
             return
 
         if isinstance(data, DVec):
@@ -79,7 +79,7 @@ class DMatrix(LogicCore):
 
         # Row vector
         if rows == 1:
-            self.data = DVec(data[0])
+            self.data = DVec(data[0], orientation='r')
             self.shape = (len(data[0]), 1)
             return
 
@@ -120,6 +120,8 @@ class DMatrix(LogicCore):
             self.shape = (len(self.data), self.data[0].length)
         else:
             self.shape = (self.data[0].length, len(self.data))
+
+        self._fix_split_vector()
         
     @property
     def dtype(self):
@@ -344,6 +346,18 @@ class DMatrix(LogicCore):
         else:
             self.data = [vec.T for vec in self.data]
         self.shape = (self.shape[1], self.shape[0])
+    
+    def _force_orientation(self, orientation):
+        if self.orientation == orientation: 
+            return
+        if isinstance(self.data, DVec):
+            f_data = [[d] for d in self.data]
+        else:
+            f_data = [[vec[i] for vec in self.data] for i in range(self.data[0].length)]
+        if len(f_data) == 1:
+            self.data = DVec(f_data[0], dtype=self.dtype, orientation=orientation)
+        else:
+            self.data = [DVec(f, dtype=self.dtype, orientation=orientation) for f in f_data]
 
     def _fix_split_vector(self):
         if not 1 in self.shape:
@@ -358,20 +372,7 @@ class DMatrix(LogicCore):
         
         if isinstance(self.data, list):
             self.data - self.data[0]
-    
-    def _force_orientation(self, orientation):
-        if self.orientation == orientation: 
-            return
-        if isinstance(self.data, DVec):
-            f_data = [[d] for d in self.data]
-        else:
-            f_data = [[vec[i] for vec in self.data] for i in range(self.data[0].length)]
 
-        if len(f_data) == 1:
-            self.data = DVec(f_data[0], dtype=self.dtype, orientation=orientation)
-        else:
-            self.data = [DVec(f, dtype=self.dtype, orientation=orientation) for f in f_data]
-    
     def reshape(self, shape, order='R') -> DMatrix:
         """
         DMatrix.reshape(shape, order='R')
@@ -476,17 +477,6 @@ class DMatrix(LogicCore):
             A column vector with items in the given range.
         """
         return DMatrix(DVec.arange(*args))
-    
-    @classmethod
-    def eye(cls, shape):
-        if isinstance(shape, tuple):
-            eye_data = [[0] * i + [1] + [0] * (shape[0] - 1 - i) for i in range(shape[1])]
-        elif isinstance(shape, int):
-            eye_data = [[0] * i + [1] + [0] * (shape - 1 - i) for i in range(shape)]
-        else:
-            raise ValueError(f"shape needs to be a tuple of ints or int not {type(shape)}")
-
-        return DMatrix(eye_data)
         
     def __str__(self):
         if isinstance(self.data, DVec):
