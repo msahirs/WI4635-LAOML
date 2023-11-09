@@ -105,6 +105,8 @@ def split_data_rnd(dataset, fraction = 0.5):
     # shuffled_data = np.copy(dataset) # realised not needed cause python is call by value lol
 
     np.random.shuffle(dataset) # N.B. In-place function!
+    # dataset = dataset[list(range(0,100,2)) + list(range(1,100,2))] 
+    # To fix the data set for 1 to 1 comparison with native.
 
     # split shuffled data accoridng to fraction
     train_X , train_y = dataset[:train_size,:-1], dataset[:train_size,-1],
