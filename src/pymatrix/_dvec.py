@@ -37,10 +37,8 @@ class DVec(LogicCore):
     def __init__(self, data, dtype=None, orientation='c') -> None:
         self._format = "dvec"
         self.orientation = orientation
-        if not data:
-            return
 
-        if not isinstance(data, list): raise TypeError(f"Vector data must be an non empty list")
+        if not isinstance(data, list) or not data: raise TypeError(f"Vector data must be an non empty list")
         if dtype is None:
             dtype = type(data[0])
         self.dtype = dtype
@@ -79,7 +77,10 @@ class DVec(LogicCore):
     def __matmul__(self, other):
         if not isinstance(other, DVec):
             return NotImplemented
-        return sum(self * other)
+        dot_sum = 0
+        for s, o in zip(self.data, other.data):
+            dot_sum += s * o
+        return dot_sum
 
     def __truediv__(self, other):
         return self.__match_operator(other, operator.__truediv__)
@@ -211,6 +212,9 @@ class DVec(LogicCore):
             str_items = list(map(str, self.data))
         return str_items, max(map(len, str_items))
     
+    def tolist(self):
+        return self.data
+    
     @classmethod
     def arange(cls, *args):
         """
@@ -255,8 +259,3 @@ class DVec(LogicCore):
         else:
             txt = self._format_col_str(p_data, col_length=self.length)
         return txt
-        
-        
-        
-
-        

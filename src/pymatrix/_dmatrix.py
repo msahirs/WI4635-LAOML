@@ -1,7 +1,7 @@
 from __future__ import annotations
 from ._logiccore import LogicCore
 from ._dvec import DVec
-import operator, functools, time, itertools, random, copy
+import operator, functools, itertools, copy
 
 class DMatrix(LogicCore):
     """
@@ -68,7 +68,6 @@ class DMatrix(LogicCore):
     
     def _from_data(self, data, dtype=None):
         # Column vector
-        
         if not isinstance(data[0], list): 
             self.shape = (len(data), 1)
             self.data = DVec(data, dtype=dtype, orientation='c')
@@ -200,7 +199,7 @@ class DMatrix(LogicCore):
     __isub__ = __sub__
     
     def __rsub__(self, other):
-        return (-1 * self).__match_operator(other, operator.__add__)
+        return (-1 *self).__match_operator(other, operator.__add__)
     
     def __mul__(self, other) -> DMatrix:
         return self.__match_operator(other, operator.__mul__)
@@ -318,6 +317,7 @@ class DMatrix(LogicCore):
             dot_data = self.__matmul_self(DMatrix(other))
         else:
             return NotImplemented
+            
         if isinstance(dot_data, list):
             return DMatrix(data=dot_data)
         return dot_data
@@ -456,6 +456,23 @@ class DMatrix(LogicCore):
         else:
             self._force_orientation('c')
             return DMatrix(sum(self.data))
+        
+    def tolist(self):
+        if not isinstance(self.data, DVec):
+            self._force_orientation('r')
+            return [row_vec.tolist() for row_vec in self.data]
+        else:
+            return self.data.tolist()
+    
+    @classmethod
+    def eye(cls, shape):
+        if isinstance(shape, tuple) and all([isinstance(int, s) for s in shape]):
+            eye_data = [[0] * i + [1] + [0] * (shape[1] - i - 1) for i in range(shape[0])]
+        elif isinstance(shape, int):
+            eye_data = [[0] * i + [1] + [0] * (shape - i - 1) for i in range(shape)]
+        else:
+            raise ValueError("Shape needs to be an integer or a tuple of integer")
+        return DMatrix(eye_data)
     
     @classmethod
     def arange(cls, *args):

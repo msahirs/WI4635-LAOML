@@ -26,11 +26,11 @@ def split_and_transform_data(X, y, fraction, seed=True):
     And then transforms the data into DMatrices and DVec.
     """
     X_train, X_test, y_train, y_test = [], [], [], []
-    if seed:
-        random.seed(35)
+    # if seed:
+        # random.seed(35)
     
-    split_indices = sorted(random.sample(range(len(X)), int(fraction * len(X))))
-    # split_indices = list(range(0,100,2))
+    # split_indices = sorted(random.sample(range(len(X)), int(fraction * len(X))))
+    split_indices = list(range(0,100,2))
     for index, (X_i, y_i) in enumerate(zip(X, y)):
         if index in split_indices:
             X_train.append(X_i)
@@ -50,18 +50,23 @@ def weights_with_gd(X_train, y_train, reg_param, alpha=.0005):
     # We need to do these calculations only once
     X_gram = X_train.T @ X_train + reg_param * DMatrix.eye(X_train.shape[1])
     Xy = X_train.T @ y_train
-    y_2 = y_train.T @ y_train
+
+    # Numpy sanity check
+    X_train_2 = np.array(X_train.tolist())
+    y_train_2 = np.array(y_train.tolist())
+    X_gram_2 = X_train_2.T @ X_train_2 + reg_param * np.eye(X_train.shape[1])
+    Xy_2 = X_train_2.T @ y_train_2
+
     w_start = DVec([1] * X_train.shape[1])
+    w_start_2 = np.ones(X_train_2.shape[1])
 
     def gradient_f(w):
         return X_gram @ w - Xy
     
-    def score_f(w):
-        return w.T @ X_gram @ w - w.T @ Xy - Xy.T @ w + y_2 + w.T @ w
-    
     w_fixed, t = fixed_gd(grad_f=gradient_f, w=w_start, alpha=alpha, epsilon=1e-8)
     print(w_fixed, t)
     print(line_search(A=X_gram, b=Xy, w=w_start))
+    print(line_search(A=X_gram_2, b=Xy_2, w=w_start_2))
     return w_fixed, t
 
 @timing
@@ -110,8 +115,8 @@ def perceptron(X_train, y_train, M_iter=500):
 
 if __name__ == "__main__":
     X, y, columns = unpack_csv()
-    fraction = 0.2
-    X_train, X_test, y_train, y_test = split_and_transform_data(X, y, fraction=fraction, seed=False)
-    # w, t = weights_with_gd(X_train, y_train, reg_param=1, alpha=0.0005)
+    fraction = 0.5
+    X_train, X_test, y_train, y_test = split_and_transform_data(X, y, fraction=fraction)
+    w, t = weights_with_gd(X_train, y_train, reg_param=1, alpha=0.0005)
     # print(count_correct(X_test, y_test, w))
-    perceptron(X_train=X_train, y_train=y_train)
+    # perceptron(X_train=X_train, y_train=y_train)
