@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 
 /data/*.mat
+full_test_data
+batch_test_data
