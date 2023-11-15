@@ -4,7 +4,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-sns.set_theme(style="whitegrid")
+sns.set_theme(style="darkgrid")
 
 def get_data_from_file(filename):
     data = []
@@ -16,80 +16,110 @@ def get_data_from_file(filename):
             pass
     return data
 
-def batch_size_impact(df):
-    group_keys = ["alpha", "reg"]
-    distinct_counts = [len(df[k].value_counts()) for k in group_keys]
-    df_grouped = df.groupby(group_keys)
-    f, axs = plt.subplots(*distinct_counts, figsize=(15, 15))
-    for x, ax_id in zip(df_grouped, np.ndindex(axs.shape)):
-        
-        sns.scatterplot(
-                    x="batch_size%", 
-                    y="test_performance",
-                    data=x[1], 
-                    ax=axs[ax_id]
-                    )
-        axs[ax_id].set_title(", ".join([f"{k}={val}" for k, val in zip(group_keys, x[0])]))
-        axs[ax_id].set(ylim=(0.92, 0.98))
-        if ax_id[1] != 0:
-            axs[ax_id].get_yaxis().set_ticklabels([])
-            axs[ax_id].set(ylabel=None)
-        
-        if ax_id[0] != distinct_counts[0] - 1:
-            axs[ax_id].get_xaxis().set_ticklabels([])
-            axs[ax_id].set(xlabel=None)
-    
-    f.savefig("batch_test.png")
-
 def batch_size_1plot(df):
-    f, ax = plt.subplots(figsize=(15, 15))
-    ax.set(ylim=(0.9, 0.98))
-    sns.scatterplot(
-                    x="reg", 
-                    y="test_performance",
-                    hue="alpha",
-                    size="batch_size%",
-                    data=df, 
-                    ax=ax
-                    )
-    f.savefig("batch_test.png")
+    g = sns.catplot(
+        data=df, 
+        x="batch_size%", 
+        y="test_performance", 
+        col="alpha",
+        col_wrap=3,
+        legend=True,
+        legend_out=False,
+        sharex=False,
+        hue="reg",
+        palette=sns.color_palette("deep", 5)
+    )
+    plt.setp(g._legend.get_title(), fontsize=20)
+    plt.setp(g._legend.get_texts(), fontsize=50)
+    g.set_titles("{col_name} {col_var}")
+    g.set(ylim=(.9, 1))
+    sns.move_legend(g, "upper left", bbox_to_anchor=(.75, .40), frameon=False)
+    g.savefig("batch_test.png")
+
+    g = sns.catplot(
+        data=df, 
+        x="batch_size%", 
+        y="elapsed_time", 
+        col="alpha",
+        col_wrap=3,
+        legend=True,
+        legend_out=False,
+        sharex=False,
+        hue="reg",
+        palette=sns.color_palette("deep", 5)
+    )
+    plt.setp(g._legend.get_title(), fontsize=20)
+    plt.setp(g._legend.get_texts(), fontsize=50)
+    g.set_titles("{col_name} {col_var}")
+    # g.set(ylim=(.9, 1))
+    # g.despine(left=True)
+    sns.move_legend(g, "upper left", bbox_to_anchor=(.75, .40), frameon=False)
+    g.savefig("batch_test_timing.png")
+
 
 def batch_size_convergence(df):
-    group_keys = ["alpha", "reg"]
-    distinct_counts = [len(df[k].value_counts()) for k in group_keys]
+    data = df.explode("convergence").reset_index().rename(columns={'index' : 'iteration'})
+    data["iteration"] = data.groupby('iteration').cumcount()
+    g = sns.relplot(
+        data=data, 
+        x="iteration", 
+        y="convergence", 
+        col="alpha",
+        col_wrap=3,
+        hue="batch_size%", 
+        style="batch_size%",
+        palette=sns.color_palette("deep", 5),
+        kind="line",
+        # errorbar=ci
+    )
+    g.set_titles("{col_name} {col_var}")
+    sns.move_legend(g, "upper left", bbox_to_anchor=(.75, .40), frameon=False)
+    g.savefig("convergence_error.png")
 
-    df_grouped = df.groupby(group_keys)
-    f, axs = plt.subplots(*distinct_counts, figsize=(15, 15))
-    for x, ax_id in zip(df_grouped, np.ndindex(axs.shape)):
-        data = x[1].copy().explode("convergence").reset_index().rename(columns={'index' : 'iteration'})
-        data["iteration"] = data.groupby('iteration').cumcount()
-        print(data["convergence"])
-        sns.lineplot(
-            data=data,
-            x="iteration",
-            y="convergence",
-            hue="batch_size%",
-            palette=sns.color_palette("deep", 5),
-            ax=axs[ax_id]
-            )
-        
-        axs[ax_id].set_title(", ".join([f"{k}={val}" for k, val in zip(group_keys, x[0])]))
-        axs[ax_id].set(ylim=(0.0, 1.0))
-        if ax_id[1] != 0:
-            axs[ax_id].get_yaxis().set_ticklabels([])
-            axs[ax_id].set(ylabel=None)
-        
-        if ax_id[0] != distinct_counts[0] - 1:
-            axs[ax_id].get_xaxis().set_ticklabels([])
-            axs[ax_id].set(xlabel=None)
-    
-    f.savefig("batch_test.png")
+def split_batch_size(df):
+    g = sns.catplot(
+        data=df, 
+        x="reg", 
+        y="test_performance", 
+        col="batch_size%",
+        hue="alpha",
 
+        col_wrap=3,
+        legend=True,
+        legend_out=False,
+        sharex=False,
+        palette=sns.color_palette("deep", 5)
+    )
+    plt.setp(g._legend.get_title(), fontsize=20)
+    plt.setp(g._legend.get_texts(), fontsize=50)
+    g.set_titles("{col_name} {col_var}")
+    g.set(ylim=(.9, 1))
+    sns.move_legend(g, "upper left", bbox_to_anchor=(.75, .40), frameon=False)
+    g.savefig("batch_test.png")
+
+def full_convergence(df):
+    g = sns.catplot(
+        data=df, 
+        x="reg", 
+        y="test_performance", 
+        col="batch_size%",
+        hue="alpha",
+
+        col_wrap=3,
+        legend=True,
+        legend_out=False,
+        sharex=False,
+        palette=sns.color_palette("deep", 5)
+    )
+    plt.setp(g._legend.get_title(), fontsize=20)
+    plt.setp(g._legend.get_texts(), fontsize=50)
+    g.set_titles("{col_name} {col_var}")
+    g.set(ylim=(.9, 1))
+    sns.move_legend(g, "upper left", bbox_to_anchor=(.75, .40), frameon=False)
+    g.savefig("batch_test.png")
 
 if __name__ == "__main__":
     data = get_data_from_file("batch_test_data")
-    df = pd.DataFrame(data)
-    # df = df.round(7)
-    # batch_size_impact(df)
-    batch_size_1plot(df)
-    # batch_size_convergence(df)
+    df = pd.DataFrame(data)[-125:]
+    # batch_size_1plot(df)
+    split_batch_size(df)

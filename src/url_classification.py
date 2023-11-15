@@ -37,14 +37,14 @@ def hinge_loss_gd(X_train, y_train, alpha=0.001, N=100, reg=1):
     status = np.ones_like(y_train)
     yX = (X_train * y_train[:, None]).tocsr() #This only needs to be calculated once.
 
-    num_wrong = []
+    correct_perc = []
     for i in range(N):
         direction = (status[:, None] * yX).sum(axis=0)
         w = (1 - alpha * reg) * w + alpha * direction
         status = (yX @ w) < 1
-        if i%10==0:num_wrong.append(status.sum())
+        correct_perc.append(1 - status.sum()/status.shape[0])
 
-    return w, num_wrong
+    return w, correct_perc
 
 @timing
 def hinge_loss_bgd(X_train, y_train, alpha=0.001, batch_size=100, epochs=10, reg=None):
@@ -94,38 +94,46 @@ def parameter_sampling(parameters):
     for r in itertools.product(*uniform_sampling):
         yield dict(zip(parameters.keys(), r))
 
-def test_alpha_convergence():
+def test_full_convergence(filename="full_test_data"):
+    """
+    This samples some hyper parameters and records the performance, 
+    then writes that away to a file, append only.
+    """
+    # alpha=0.001, batch_size=100, epochs=10, reg
+    pars = parameter_sampling({
+        "alpha":(0.0005, 0.0015, 0.0001),
+        "reg":(0.05, 0.55, 0.05),
+    })
+    N = 50
+    
     X, y = parse_url(day=1)
     X = scipy.sparse.csr_array(X)
     X_train, X_test, y_train, y_test = split_dataset(X, y)
 
-    N = 100
+    yX_test = (X_test * y_test[:, None]).tocsr()
 
-    weights_hl, num_wrong_001 = hinge_loss_gd(X_train=X_train, y_train=y_train, alpha=0.001, N=N)
-    weights_hl, num_wrong_0005 = hinge_loss_gd(X_train=X_train, y_train=y_train, alpha=0.0005, N=N)
-    weights_hl, num_wrong_0015 = hinge_loss_gd(X_train=X_train, y_train=y_train, alpha=0.0015, N=N)
+    for i, sample in enumerate(pars):
+        t_start = time.time()
+        weight, convergence = hinge_loss_gd(
+            X_train, 
+            y_train, 
+            alpha=sample.get("alpha", 0.0010),
+            reg=sample.get("reg", None),
+            N=N,
+            )
 
-    plt.figure(figsize = (10, 8))
-
-    plt.plot(range(0, N, 10), num_wrong_001,
-            color = 'b',
-            label = "alpha=0.001",
-            marker = 'X', markersize = 3)
-    
-    plt.plot(range(0, N, 10), num_wrong_0005,
-            color = 'r',
-            label = "alpha=0.0005",
-            marker = 'X', markersize = 3)
-    
-    plt.plot(range(0, N, 10), num_wrong_0015,
-            color = 'orange',
-            label = "alpha=0.0015",
-            marker = 'X', markersize = 3)
-
-    plt.xlabel('Number of rounds')
-    plt.ylabel('Wrongly classified in train set')
-    plt.legend()
-    plt.savefig("alphagraph.png")
+        t_end = time.time()
+        result = {
+                **sample,
+                **{
+                "convergence":convergence,
+                "test_performance": (1 - ((yX_test @ weight) < 1).sum()/X_test.shape[0]).item(),
+                "elapsed_time": t_end - t_start
+                }
+            }
+        print(i, t_end - t_start)
+        with open(filename, 'a+b') as fp:
+            pickle.dump(result, fp)
 
 def test_mini_batch_convergence(filename="batch_test_data"):
     """
@@ -134,8 +142,8 @@ def test_mini_batch_convergence(filename="batch_test_data"):
     """
     # alpha=0.001, batch_size=100, epochs=10, reg
     pars = parameter_sampling({
-        "alpha":(0.0005, 0.0051, 0.001),
-        "reg":(0.2, 1.20, 0.2),
+        "alpha":(0.0005, 0.0015, 0.0002),
+        "reg":(0.05, 0.30, 0.05),
         "batch_size%":(5, 30, 5)
     })
     epochs = 32
@@ -171,6 +179,6 @@ def test_mini_batch_convergence(filename="batch_test_data"):
             pickle.dump(result, fp)
     
 if __name__ == "__main__":
-    test_mini_batch_convergence()
+    test_full_convergence()
 
     
