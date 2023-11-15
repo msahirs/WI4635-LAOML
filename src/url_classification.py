@@ -84,7 +84,6 @@ def parameter_sampling(parameters):
     for r in itertools.product(*random_choices):
         yield dict(zip(parameters.keys(), r))
 
-
 def test_alpha_convergence():
     X, y = parse_url(day=1)
     X = scipy.sparse.csr_array(X)

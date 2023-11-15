@@ -62,12 +62,11 @@ def extract_dataset(data_file : str) -> np.ndarray:
     # versicolor gets assigned 1 and virginica -1
     outcome_vec = np.array([1 if i[-1]== "versicolor" else -1 for i in sample_data])
 
-    # remove labels
-    for i in sample_data:
-        i.pop()
+    # remove labels in-place
+    for i in sample_data: i.pop()
 
     # convert list of lists to ndarray of floats
-    sample_data = np.array(sample_data, dtype=float)
+    sample_data = np.array(sample_data, dtype = float)
 
     # Returns as single nd array with last column as outcome
     return np.hstack((sample_data, outcome_vec[:,np.newaxis]))
@@ -343,7 +342,7 @@ def main():
 
     data_array = extract_dataset(iris_data_loc)
 
-    fraction = 0.5
+    fraction = 0.8
     train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=fraction)
 
     reg = 1e-1
@@ -356,15 +355,15 @@ def main():
     w_pt_normalised = w_pt/np.linalg.norm(w_pt)
 
     print("Weights of cg:", w_cg)
-    print("Number correct", calculate_correct(test_X, test_y, w_cg))
+    print(f"Number correct (out of {test_y.size})", calculate_correct(test_X, test_y, w_cg))
     print("Weights of qr:", w_qr)
-    print("Number correct", calculate_correct(test_X, test_y, w_qr))
+    print(f"Number correct (out of {test_y.size})", calculate_correct(test_X, test_y, w_qr))
     print("weights of bd:", w_bd)
-    print("Number correct", calculate_correct(test_X, test_y, w_bd))
+    print(f"Number correct (out of {test_y.size})", calculate_correct(test_X, test_y, w_bd))
     print("weights of pt", w_pt)
-    print("Number correct", calculate_correct(test_X, test_y, w_pt))
+    print(f"Number correct (out of {test_y.size})", calculate_correct(test_X, test_y, w_pt))
     print("Weights of hyperplane clustering:", weight_vec)
-    print("Number correct", calculate_correct(test_X, test_y, weight_vec))
+    print(f"Number correct (out of {test_y.size})", calculate_correct(test_X, test_y, weight_vec))
 
     x = [i for i in range(w_cg.size)]
 
