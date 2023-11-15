@@ -84,6 +84,7 @@ def parameter_sampling(parameters):
     for r in itertools.product(*random_choices):
         yield dict(zip(parameters.keys(), r))
 
+
 def test_alpha_convergence():
     X, y = parse_url(day=1)
     X = scipy.sparse.csr_array(X)
@@ -117,7 +118,8 @@ def test_alpha_convergence():
     plt.legend()
     plt.savefig("alphagraph.png")
 
-def test_mini_batch_convergence():
+def test_mini_batch_convergence(plots = False): # Added visualisations
+
     pars = parameter_sampling({
         "alpha":(5, 0.0001, 0.005),
         "reg":(5, 0.01, 1),
@@ -127,17 +129,51 @@ def test_mini_batch_convergence():
     X = scipy.sparse.csr_array(X)
     X_train, X_test, y_train, y_test = split_dataset(X, y)
 
-    weights_hl, num_wrong_001 = hinge_loss_bgd(X_train, y_train, alpha=0.001, batch_size=X_train.shape[0]//15, epochs=10, reg=None)
-    weights_hl, num_wrong_0005 = hinge_loss_bgd(X_train, y_train, alpha=0.0005, batch_size=X_train.shape[0]//15, epochs=10, reg=None)
-    weights_hl, num_wrong_0015 = hinge_loss_bgd(X_train, y_train, alpha=0.0015, batch_size=X_train.shape[0]//15, epochs=10, reg=None)
-    weights_hl, num_wrong_002 = hinge_loss_bgd(X_train, y_train, alpha=0.002, batch_size=X_train.shape[0]//15, epochs=10, reg=None)
-    print(num_wrong_001)
-    print(num_wrong_0005)
-    print(num_wrong_0015)
-    print(num_wrong_002)
+    epochs = 200
+
+    weights_hl, num_wrong_001 = hinge_loss_bgd(X_train, y_train, alpha=0.001, batch_size=X_train.shape[0]//15, epochs=epochs, reg=None)
+    weights_hl, num_wrong_0005 = hinge_loss_bgd(X_train, y_train, alpha=0.0005, batch_size=X_train.shape[0]//15, epochs=epochs, reg=None)
+    weights_hl, num_wrong_0015 = hinge_loss_bgd(X_train, y_train, alpha=0.0015, batch_size=X_train.shape[0]//15, epochs=epochs, reg=None)
+    weights_hl, num_wrong_002 = hinge_loss_bgd(X_train, y_train, alpha=0.002, batch_size=X_train.shape[0]//15, epochs=epochs, reg=None)
+    
+    # print(num_wrong_001)
+    # print(num_wrong_0005)
+    # print(num_wrong_0015)
+    # print(num_wrong_002)
+
+    if plots:
+
+        plt.figure(figsize = (10, 8))
+
+        plt.plot(range(0, epochs, 1), num_wrong_0005,
+                color = 'r',
+                label = "alpha=0.0005",
+                marker = 'X', markersize = 3)
+
+        plt.plot(range(0, epochs, 1), num_wrong_001,
+                color = 'b',
+                label = "alpha=0.001",
+                marker = 'X', markersize = 3)
+        
+
+        plt.plot(range(0, epochs, 1), num_wrong_0015,
+                color = 'orange',
+                label = "alpha=0.0015",
+                marker = 'X', markersize = 3)
+
+        plt.plot(range(0, epochs, 1), num_wrong_002,
+                color = 'g',
+                label = "alpha=0.002",
+                marker = 'X', markersize = 3)
+
+        plt.xlabel('Number of Epochs')
+        plt.ylabel('Wrongly classified in train set (mini-batch HL for SVM)')
+        plt.legend()
+        plt.savefig("alphagraph_mini.png")
+
 
 if __name__ == "__main__":
     np.random.default_rng(1)
     # test_alpha_convergence()
-    test_mini_batch_convergence()
+    test_mini_batch_convergence(plots = True)
     
