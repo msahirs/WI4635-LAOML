@@ -7,11 +7,14 @@ from iris_classification import timing
 
 
 @timing
-def parse_url(filename="data/url.mat", day =1):
-    v = scipy.io.loadmat(filename)[f'Day{ day}']
-    X = v['data'][0][0]
-    y = np.array([( -1) ** v['labels'][0][0][k][0] for k in range(len(v['labels'][0][0]))])
-    return X , y
+def parse_url(filename="data/url.mat", days = [1]):
+    all_parsed = scipy.io.loadmat(filename)#[f'Day{ day}']
+    Xs, ys = [], []
+    for day in days:
+        v = all_parsed[f'Day{ day}']
+        Xs.append(v['data'][0][0])
+        ys.append(np.array([( -1) ** v['labels'][0][0][k][0] for k in range(len(v['labels'][0][0]))]))
+    return scipy.sparse.vstack(Xs) , np.concatenate(ys)
 
 @timing
 def split_dataset(X, y, frac=0.5):
@@ -101,12 +104,12 @@ def test_full_convergence(filename="full_test_data"):
     """
     # alpha=0.001, batch_size=100, epochs=10, reg
     pars = parameter_sampling({
-        "alpha":(0.0005, 0.0015, 0.0001),
+        "alpha":(0.0005, 0.0055, 0.0005),
         "reg":(0.05, 0.55, 0.05),
     })
     N = 50
     
-    X, y = parse_url(day=1)
+    X, y = parse_url(days=[1])
     X = scipy.sparse.csr_array(X)
     X_train, X_test, y_train, y_test = split_dataset(X, y)
 
@@ -148,7 +151,8 @@ def test_mini_batch_convergence(filename="batch_test_data"):
     })
     epochs = 32
 
-    X, y = parse_url(day=1)
+    X, y = parse_url(days=[1])
+
     X = scipy.sparse.csr_array(X)
     X_train, X_test, y_train, y_test = split_dataset(X, y)
 
@@ -179,6 +183,7 @@ def test_mini_batch_convergence(filename="batch_test_data"):
             pickle.dump(result, fp)
     
 if __name__ == "__main__":
+    # test_mini_batch_convergence()
     test_full_convergence()
 
     
