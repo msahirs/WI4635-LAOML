@@ -134,10 +134,7 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     Returns
     ----------
     no_correct : int
-        Number of correctly identified test entries
-
-    results_sign : NDArray
-        Vector containing classification output  
+        Number of correctly identified test entries 
 
     weight_vec : NDArray
         Vector containing weights to define hyperplane
@@ -182,7 +179,7 @@ def tikhonov_qr_lse(A, b,reg_param = 1):
     # Solve and return solution of lse via qr
     return np.linalg.solve(r, rhs)
 
-def linear_CG(A, b, x = None, epsilon = 1e-8):
+def linear_CG(A, b, x = None, epsilon = 1e-8, max_iter=100_000):
    
    # If no initial starting point is given, init with ones
     if x is None:
@@ -191,7 +188,7 @@ def linear_CG(A, b, x = None, epsilon = 1e-8):
     res = A.dot(x) - b # Initialize the residual
     delta = -res # Initialize the descent direction
     
-    while True:
+    for _ in range(max_iter):
         
         if np.linalg.norm(res) <= epsilon:
             return x # Return the minimizer x*
@@ -267,7 +264,7 @@ def perceptron(X_train, y_train, M_iter=500):
         i += 1
 
     if i == M_iter:
-        print("Did not exit early, data might not be linearly seperable")
+        print("Did not exit early, data might not be linearly separable")
     return x
 
 @timing
@@ -282,7 +279,7 @@ def _test_1(plot = True): # Genreic lse vs qr factorisation + tikhonov vs CG + t
     # assemble matrix A
     A = np.vstack([data, np.ones((data.size))]).T
 
-    reg_param = 1e-0 # Set prefactor for norm term in tikhonov reguularisation
+    reg_param = 1e-1 # Set prefactor for norm term in tikhonov reguularisation
 
     # Use QR + Tikhonov Reg function
     tik_qr_weights = tikhonov_qr_lse(A, outcome, reg_param = reg_param)
@@ -297,55 +294,56 @@ def _test_1(plot = True): # Genreic lse vs qr factorisation + tikhonov vs CG + t
     # plot the results
     if plot == True:
     
-        plt.figure(figsize = (10, 8))
+            plt.figure(figsize = (10, 8))
 
-        plt.scatter(data, outcome,
-                color= 'b', alpha = 0.025,
-                label = "Input Data",
-                marker = '.')  # Raw data plot
-        
-        plt.plot(data, generic_weights[0]*data + generic_weights[1],
-                color = 'orange',
-                label = "Traditional LSE",
-                marker = 'X', markersize = 3) # lse using direct solve (w/o inversion)
+            plt.scatter(data, outcome,
+                    color= 'b', alpha = 0.025,
+                    label = "Input Data",
+                    marker = '.')  # Raw data plot
+            
+            plt.plot(data, generic_weights[0]*data + generic_weights[1],
+                    color = 'orange',
+                    label = "Traditional LSE",
+                    marker = 'X', markersize = 3) # lse using direct solve (w/o inversion)
 
-        plt.plot(data, tik_qr_weights[0]*data + tik_qr_weights[1],
-                'g',
-                label = f"QR LSE w/ Tikhonov ($\lambda = {reg_param}$)",
-                marker = 'o', markersize = 3) # using qr factorisation w/ tikhonov l2 regularisation
-        
-        plt.plot(data, tik_cg_weights[0]*data + tik_cg_weights[1],
-                color = 'black', alpha = 0.5,
-                label = f"CG LSE w/ Tikhonov ($\lambda = {reg_param}$)",
-                marker = '*', markersize = 5,
-                linestyle = "--") # using qr factorisation w/ tikhonov l2 regularisation
-        
-        plt.xlabel('Input data $x$')
-        plt.ylabel('Outcome $y$')
-        plt.legend()
-        plt.show()
+            plt.plot(data, tik_qr_weights[0]*data + tik_qr_weights[1],
+                    'g',
+                    label = f"QR LSE w/ Tikhonov ($\lambda = {reg_param}$)",
+                    marker = 'o', markersize = 3) # using qr factorisation w/ tikhonov l2 regularisation
+            
+            plt.plot(data, tik_cg_weights[0]*data + tik_cg_weights[1],
+                    color = 'black', alpha = 0.5,
+                    label = f"CG LSE w/ Tikhonov ($\lambda = {reg_param}$)",
+                    marker = '*', markersize = 5,
+                    linestyle = "--") # using qr factorisation w/ tikhonov l2 regularisation
+            
+            plt.xlabel('Input data $x$')
+            plt.ylabel('Outcome $y$')
+            plt.legend()
+            plt.show()
 
-def _test_2(): # test to check CG function for solving system of equations
+def _test_2(): # test to check CG functions for solving system of equations
     A = np.array([[-7, 1],
                   [3, -3]])
     
     b = np.array([2,3])
 
-    print(linear_CG(A,b))
+    # print(linear_CG(A,b))
 
-def _test_3(): # TODO: test for matrices of high condition numbers. Good check for regularisation
-    pass
+    print(tikhonov_bold_driver(A,b))
+    print(tikhonov_cg_lse(A,b))
+    print(tikhonov_qr_lse(A,b))
 
-def main():
+def _test_3(): # weight comparison of different algorithms
 
     iris_data_loc = './data/iris.csv' # File name of IRIS dataset
 
     data_array = extract_dataset(iris_data_loc)
 
-    fraction = 0.8
+    fraction = 0.5
     train_X, train_y, test_X, test_y = split_data_rnd(data_array, fraction=fraction)
 
-    reg = 1e-1
+    reg = 5e-2
 
     no_correct, weight_vec = cluster_dataset_test(train_X, train_y, test_X, test_y)
     w_cg = tikhonov_cg_lse(train_X,train_y, reg_param= reg)
@@ -365,25 +363,30 @@ def main():
     print("Weights of hyperplane clustering:", weight_vec)
     print(f"Number correct (out of {test_y.size})", calculate_correct(test_X, test_y, weight_vec))
 
-    x = [i for i in range(w_cg.size)]
+    x = [int(1+i) for i in range(w_cg.size)]
+    
+    plt.plot(x, w_cg , label = f"CGD ($\lambda = {reg}$)",
+                marker = 'x', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_qr, label = f"QR ($\lambda = {reg}$)",
+                marker = 'o', alpha = 0.8, linestyle = '--')
+    plt.plot(x, weight_vec, label = "Hyperplane",
+                marker = '^', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_bd, label = f"Bold Driver DG ($\lambda = {reg}$)",
+                marker = '>', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_pt_normalised, label = "Perceptron",
+                marker = '<', alpha = 0.8, linestyle = '--')
 
-    plt.plot(x, w_cg , label = f"cg ($\lambda = {reg}$)",
-             marker = 'x', alpha = 0.8, linestyle = '--')
-    plt.plot(x, w_qr, label = f"qr ($\lambda = {reg}$)",
-             marker = 'o', alpha = 0.8, linestyle = '--')
-    plt.plot(x, weight_vec, label = "hyperplane",
-             marker = '^', alpha = 0.8, linestyle = '--')
-    plt.plot(x, w_bd, label = f"bold driver ($\lambda = {reg}$)",
-             marker = '>', alpha = 0.8, linestyle = '--')
-    plt.plot(x, w_pt_normalised, label = "perceptron (normalised)",
-             marker = '<', alpha = 0.8, linestyle = '--')
+    plt.xlabel("Weight")
+    plt.xticks(x)
 
-    plt.title("Comparision with fraction %.2f of input data" % fraction)
+    plt.ylabel("Normalised Weight Value")
+    plt.title("Comparision using %.1f %% of input data" % (fraction *100))
     plt.legend()
-    plt.show()
+    plt.savefig("iris_figures/iris_weight_comparison", dpi = 300)
 
-    # _test_1(plot = False)
-    # _test_2()
+def main():
+
+    _test_3()
 
 if __name__ == "__main__":
     main()
