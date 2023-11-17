@@ -72,7 +72,7 @@ def hinge_loss_bgd(X_train, y_train, alpha=0.001, batch_size=100, epochs=10, reg
             direction = (status[:, None] * batch).sum(axis=0)
             w = (1 - alpha * reg) * w + alpha * direction
         
-        correct_perc.append((1 - ((yX @ w) < 1).sum()/y_train.shape[0]).item())
+        # correct_perc.append((1 - ((yX @ w) < 1).sum()/y_train.shape[0]).item())
     
     return w, correct_perc
 
@@ -152,7 +152,7 @@ def test_mini_batch_convergence(filename="batch_test_data"):
     epochs = 32
 
     X, y = parse_url(days=[1])
-
+    
     X = scipy.sparse.csr_array(X)
     X_train, X_test, y_train, y_test = split_dataset(X, y)
 
@@ -181,9 +181,39 @@ def test_mini_batch_convergence(filename="batch_test_data"):
         print(i, t_end - t_start)
         with open(filename, 'a+b') as fp:
             pickle.dump(result, fp)
+
+def test_single_run():
+    N = 50
     
+    X, y = parse_url(days=list(range(1,33)))
+
+    X = scipy.sparse.csr_array(X)
+    X_train, X_test, y_train, y_test = split_dataset(X, y)
+
+    yX_test = (X_test * y_test[:, None]).tocsr()
+
+    t1 = time.time()
+    ttl_time = 0
+    perf = []
+    for i in range(5):
+        t1 = time.time()
+        weight, convergence = hinge_loss_bgd(
+            X_train, 
+            y_train, 
+            alpha=0.0011, 
+            batch_size=int(X_train.shape[0]*0.2), 
+            epochs=16, 
+            reg=0.25
+            )
+        ttl_time += time.time() - t1
+        perf.append((1 - ((yX_test @ weight) < 1).sum()/X_test.shape[0]).item())
+
+    print(ttl_time*200)
+    print(sum(perf)/5)
+
 if __name__ == "__main__":
     # test_mini_batch_convergence()
-    test_full_convergence()
+    # test_full_convergence()
+    test_single_run()
 
     

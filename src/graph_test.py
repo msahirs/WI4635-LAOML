@@ -99,32 +99,33 @@ def split_batch_size(df):
 
 def full_performance(df):
     f, ax = plt.subplots(figsize=(15, 15))
-    sns.lineplot(
-        data=df,
-        x="reg",
-        y="test_performance",
-        hue="alpha",
-        style="alpha",
-        ax=ax,
-        palette=sns.color_palette("deep", 10),
-    )
-    sns.move_legend(ax, "lower left")
-    f.savefig("full_split.png")
-
-    f, ax = plt.subplots(nrows=2, figsize=(15, 15))
-    sns.lineplot(
-        data=df,
-        x="reg",
-        y="test_performance",
-        ax=ax[0],
-    )
-    sns.lineplot(
+    sns.scatterplot(
         data=df,
         x="alpha",
         y="test_performance",
-        ax=ax[1],
+        hue="reg",
+        style="reg",
+        ax=ax,
+        s=200,
+        palette=sns.color_palette("deep", 10),
     )
-    f.savefig("full_test.png")
+    sns.move_legend(ax, "lower right")
+    f.savefig("full_split.png")
+
+    # f, ax = plt.subplots(nrows=2, figsize=(15, 15))
+    # sns.lineplot(
+    #     data=df,
+    #     x="reg",
+    #     y="test_performance",
+    #     ax=ax[0],
+    # )
+    # sns.lineplot(
+    #     data=df,
+    #     x="alpha",
+    #     y="test_performance",
+    #     ax=ax[1],
+    # )
+    # f.savefig("full_test.png")
 
 def full_convergence(df):
     data = df.explode("convergence").reset_index().rename(columns={'index' : 'iteration'})
@@ -142,10 +143,11 @@ def full_convergence(df):
     )
     g.set_titles("{col_name} {col_var}")
     sns.move_legend(g, "upper left", bbox_to_anchor=(.50, .20), frameon=False)
-    g.savefig("convergence_error.png")    
+    g.savefig("convergence_error.png")   
 
 if __name__ == "__main__":
     data = get_data_from_file("full_test_data")
     df = pd.DataFrame(data)[-100:]
+    print(df["test_performance"].max())
     # full_performance(df)
-    full_convergence(df)
+    # full_convergence(df)
