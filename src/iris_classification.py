@@ -228,7 +228,7 @@ def tikhonov_bold_driver(data, outcome, reg_param = 1, x = None, epsilon = 1e-8)
         x = np.ones(data.shape[1])
     
     def grad_f(w):
-        return (X_gram + reg_param * np.eye(data.shape[1])) @ w - Xy
+        return (X_gram + reg_param**0.5 * np.eye(data.shape[1])) @ w - Xy
     def obj_f(w):
         return w.T @ X_gram @ w - w.T @ Xy - Xy.T @ w + y_2 + w.T @ w
 
@@ -385,8 +385,8 @@ def _test_3(): # weight comparison of different algorithms
     plt.savefig("iris_figures/iris_weight_comparison", dpi = 300)
 
 def main():
-
-    _test_3()
+    
+    pass
 
 if __name__ == "__main__":
     main()

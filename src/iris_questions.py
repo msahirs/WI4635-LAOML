@@ -10,9 +10,9 @@ plt.rcParams['text.usetex']  = True \
     if shutil.which('latex') else False
 
 
-
 iris_data_loc = './data/iris.csv' # File name of IRIS dataset
 data_array = ic.extract_dataset(iris_data_loc)
+
 
 def part_c(frac = 0, weight_samples = 100):
 
@@ -74,11 +74,55 @@ def part_c(frac = 0, weight_samples = 100):
 
     # print(f"In {weight_samples} random weight samples, {corr_higher} higher than least-squares solution")
 
+def part_d_i(frac = 0.5):
+
+    plt.figure(figsize = (12, 8))
+
+
+    train_X, train_y, test_X, test_y = ic.split_data_rnd(data_array, fraction=frac)
+
+    reg = 5e-2
+
+    no_correct, weight_vec = ic.cluster_dataset_test(train_X, train_y, test_X, test_y)
+    w_cg = ic.tikhonov_cg_lse(train_X,train_y, reg_param= reg)
+    w_qr = ic.tikhonov_qr_lse(train_X,train_y, reg_param= reg)
+    w_bd = ic.tikhonov_bold_driver(train_X, train_y, reg_param=reg)
+
+    print("Weights of cg:", w_cg)
+    print(f"Number correct (out of {test_y.size})", ic.calculate_correct(test_X, test_y, w_cg))
+    print("Weights of qr:", w_qr)
+    print(f"Number correct (out of {test_y.size})", ic.calculate_correct(test_X, test_y, w_qr))
+    print("weights of bd:", w_bd)
+    print(f"Number correct (out of {test_y.size})", ic.calculate_correct(test_X, test_y, w_bd))
+    print("Weights of hyperplane clustering:", weight_vec)
+    print(f"Number correct (out of {test_y.size})", ic.calculate_correct(test_X, test_y, weight_vec))
+
+    x = [int(i) for i in range(w_cg.size)]
+    
+    plt.plot(x, w_cg , label = f"Conjugate GD ($\lambda = {reg}$)",
+                marker = 'x', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_qr, label = f"QR ($\lambda = {reg}$)",
+                marker = 'o', alpha = 0.8, linestyle = '--')
+    plt.plot(x, weight_vec, label = "Ordinary LSE",
+                marker = '^', alpha = 0.8, linestyle = '--')
+    plt.plot(x, w_bd, label = f"Bold Driver GD ($\lambda = {reg}$)",
+                marker = '>', alpha = 0.8, linestyle = '--')
+
+    plt.xlabel("Weight Vector Index", fontsize = 19)
+    plt.xticks(fontsize = 16)
+    plt.yticks(fontsize = 16)
+
+    plt.ylabel("Normalised Weight Value", fontsize=19)
+    plt.title("Algorithm Comparision with %.1f fraction as training" % (frac), fontsize =22)
+    plt.legend(frameon=True, fontsize=15)
+    plt.tight_layout()
+    plt.savefig("iris_figures/iris_gd_comparison", dpi = 300)
     
 
 
 def main():
-    part_c()
+    # part_c()
+    part_d_i()
 
 
 if __name__ == "__main__":
