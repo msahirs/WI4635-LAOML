@@ -118,11 +118,96 @@ def part_d_i(frac = 0.5):
     plt.tight_layout()
     plt.savefig("iris_figures/iris_gd_comparison", dpi = 300)
     
+def part_d_ii(frac = 0.5):
 
+    train_X, train_y, test_X, test_y = ic.split_data_rnd(data_array, fraction=frac)
 
+    reg_vals = np.linspace(0,100,50000).tolist()
+
+    no_corr_qr = []
+    no_corr_gd = []
+
+    for reg in reg_vals:
+
+        w_qr = ic.tikhonov_qr_lse(train_X,train_y, reg_param= reg)
+        w_gd = ic.tikhonov_cg_lse(train_X, train_y, reg_param=reg)
+
+        no_corr_qr.append(ic.calculate_correct(test_X, test_y, w_qr))
+        no_corr_gd.append(ic.calculate_correct(test_X, test_y, w_gd))
+
+    plt.figure(figsize = (12, 8))
+    plt.plot(reg_vals,no_corr_qr,label = "QR")
+    plt.plot(reg_vals,no_corr_gd, label = "CG")
+
+    plt.xlabel("Hyper Paramater Value",fontsize=16)
+    plt.ylabel(f"Number of Correctly Classified Entries",fontsize=16)
+
+    plt.xticks(fontsize=13)
+    plt.yticks(fontsize=13) 
+
+    plt.title(f"Effect of Regularisation Hyperparameter",fontsize=20)
+
+    plt.tight_layout()
+    plt.legend(frameon=True, fontsize=15)
+    plt.savefig("iris_figures/gd_hyperparameter", dpi = 300)
+
+    # plt.show()
+
+def part_e(frac = 0.2):
+
+    reg = 5e-2
+
+    M_iter = 500
+
+    no_of_runs = 200
+
+    w_pt_list = []
+    w_qr_list = []
+    w_cg_list = []
+    w_hyp_list = []
+
+    for i in range(no_of_runs):
+
+        train_X, train_y, test_X, test_y = ic.split_data_rnd(data_array, fraction=frac)
+
+        w_pt, M_iter_sep = ic.perceptron(train_X, train_y, M_iter = M_iter)
+        w_qr = ic.tikhonov_qr_lse(train_X,train_y, reg_param= reg)
+        w_cg = ic.tikhonov_cg_lse(train_X, train_y, reg_param=reg)
+        no_correct, weight_vec = ic.cluster_dataset_test(train_X, train_y, test_X, test_y)
+
+        w_cg_list.append(ic.calculate_correct(test_X, test_y, w_cg))
+        w_hyp_list.append(ic.calculate_correct(test_X, test_y, weight_vec))
+        w_qr_list.append(ic.calculate_correct(test_X, test_y, w_qr))
+        w_pt_list.append(ic.calculate_correct(test_X, test_y, w_pt))
+
+        if M_iter_sep == M_iter:
+
+            plt.scatter(i,ic.calculate_correct(test_X, test_y, w_pt), marker = '.',color = 'k', alpha=0.75,linewidth=0.5)
+
+    x = [int(1+i) for i in range(no_of_runs)]
+
+    plt.plot(x, w_cg_list , label = f"CGD ($\lambda = {reg}$)",
+                marker = 'x', alpha = 0.8, linestyle = '--',markersize = 1)
+    plt.plot(x, w_qr_list, label = f"QR ($\lambda = {reg}$)",
+                marker = 'o', alpha = 0.8, linestyle = '--',markersize = 1)
+    plt.plot(x, w_hyp_list, label = "Hyperplane",
+                marker = '^', alpha = 0.8, linestyle = '--',markersize = 1)
+    plt.plot(x, w_pt_list, label = "Perceptron",
+                marker = '<', alpha = 0.8, linestyle = '-',markersize = 1)
+
+    plt.xlabel("Run Number")
+    # plt.xticks(x)
+
+    plt.ylabel("Correctly identified values")
+    plt.title("Algorithm Comparision", fontsize =22)
+    plt.legend(frameon=True, fontsize=15)
+    plt.tight_layout()
+    plt.savefig("iris_figures/perceptron_comparison", dpi = 300)
 def main():
     # part_c()
-    part_d_i()
+    # part_d_i()
+    # part_d_ii()
+    part_e()
 
 
 if __name__ == "__main__":
