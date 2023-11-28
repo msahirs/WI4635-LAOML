@@ -141,7 +141,7 @@ def cluster_dataset_test(train_X, train_y, test_X, test_y):
     """    
 
     # Solve least-squares weights in the most generic way using matrix_transposed-to-matrix product
-    @timing
+    # @timing
     def train_clustering(train_data, train_outcome):
         return np.linalg.solve(train_data.T @ train_data, train_data.T @ train_outcome)
     
@@ -160,7 +160,7 @@ def calculate_correct(X, y, w):
 def generic_lse(train_data, train_outcome): # Does not use matrix inverse, but direct linear system solve
         return np.linalg.solve(train_data.T @ train_data, train_data.T @ train_outcome)
 
-@timing    
+# @timing    
 def tikhonov_qr_lse(A, b,reg_param = 1):
 
     n_param = A.shape[1] # Get number of parameters
@@ -217,7 +217,7 @@ def bold_driver_GD(obj_f, grad_f, x, epsilon= 1e-8, alpha=0.005, max_iter=100_00
         obj_prev = obj_now
     return x
 
-@timing
+# @timing
 def tikhonov_bold_driver(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
 
     X_gram = data.T @ data
@@ -228,13 +228,13 @@ def tikhonov_bold_driver(data, outcome, reg_param = 1, x = None, epsilon = 1e-8)
         x = np.ones(data.shape[1])
     
     def grad_f(w):
-        return (X_gram + reg_param * np.eye(data.shape[1])) @ w - Xy
+        return (X_gram + reg_param**0.5 * np.eye(data.shape[1])) @ w - Xy
     def obj_f(w):
         return w.T @ X_gram @ w - w.T @ Xy - Xy.T @ w + y_2 + w.T @ w
 
     return bold_driver_GD(obj_f, grad_f, x = x, epsilon = epsilon)
 
-@timing
+# @timing
 def tikhonov_cg_lse(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
 
     n_param = data.shape[1] # Get number of parameters
@@ -249,7 +249,7 @@ def tikhonov_cg_lse(data, outcome, reg_param = 1, x = None, epsilon = 1e-8):
 
     return linear_CG(lse_lhs, lse_rhs, x = x, epsilon = epsilon)
 
-@timing
+# @timing
 def perceptron(X_train, y_train, M_iter=500):
 
     x = np.ones(X_train.shape[1])
@@ -264,8 +264,10 @@ def perceptron(X_train, y_train, M_iter=500):
         i += 1
 
     if i == M_iter:
-        print("Did not exit early, data might not be linearly separable")
-    return x
+        # print("Did not exit early, data might not be linearly separable")
+        pass
+
+    return x, M_iter
 
 @timing
 def _test_1(plot = True): # Genreic lse vs qr factorisation + tikhonov vs CG + tikhonov test
@@ -385,8 +387,8 @@ def _test_3(): # weight comparison of different algorithms
     plt.savefig("iris_figures/iris_weight_comparison", dpi = 300)
 
 def main():
-
-    _test_3()
+    
+    pass
 
 if __name__ == "__main__":
     main()
