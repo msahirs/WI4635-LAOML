@@ -102,11 +102,15 @@ def roll_matrix_convolution(input_image, kernel):
                             :input_image.shape[1] - kernel.shape[1] + 1].sum(-1)
     return res
 
-def convolution(input_image, kernel, method="scipy"):
-    if input_image.shape[0] < kernel.shape[0] or input_image.shape[1] < kernel.shape[1]:
-        raise IndexError("Kernel is bigger then the image.")
-    
+def one_convolution(input_image, kernel, method="roll", padding=False):
     """Handles the different kind of convolution methods"""
+    if not padding:
+        if input_image.shape[0] < kernel.shape[0] or input_image.shape[1] < kernel.shape[1]:
+            raise IndexError("Kernel is bigger then the image.")
+    else:
+        padding_width = [(s - 1, s - 1) for s in kernel.shape]
+        input_image = np.pad(input_image, padding_width)
+
     if method == "scipy":
         return scipy_convolution(input_image, kernel)
     elif method == "sparse_mul":
@@ -116,27 +120,37 @@ def convolution(input_image, kernel, method="scipy"):
     elif method == "loop":
         return loop_convolution(input_image, kernel)
     
-def n_convolutions(input_image, kernels, method="scipy"):
+def n_convolutions(input_image, kernels, method="roll", padding=False):
     """
         Does n convolutions with each kernel.
         TODO: Do not do sequential.
     """
-    return [convolution(input_image, kernel, method=method) for kernel in kernels]
+    return [one_convolution(input_image, kernel, method=method, padding=padding) for kernel in kernels]
+
+def n_3d_convolutions(input_images, kernels, method="roll", padding=False):
+    pass
 
 if __name__ == "__main__":
-    np.random.seed(1)
-    random_image = np.random.rand(1000, 1000)
+    a = np.arange(9).reshape((3,3))
     test_kernel = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
-    t1 = time.time()
-    convolution1 = scipy_convolution(random_image, test_kernel)
-    print("scipy took:", time.time() - t1)
-    t1 = time.time()
-    convolution2 = loop_convolution(random_image, test_kernel)
-    print("loop took:", time.time() - t1)
-    t1 = time.time()
-    # convolution3 = matrix_mul_convolution(random_image, test_kernel)
-    convolution4 = sparse_matrix_mul_convolution(random_image, test_kernel)
-    print("sparse took:", time.time() - t1)
-    t1 = time.time()
-    convolution5 = roll_matrix_convolution(random_image, test_kernel)
-    print("rotate took:", time.time() - t1)
+    print(one_convolution(a, test_kernel, method="roll", padding=True))
+    print(one_convolution(test_kernel, np.flip(a), method="roll", padding=True))
+    print(signal.convolve(a, np.flip(test_kernel), mode='full'))
+    print(signal.convolve(test_kernel, a, mode='full'))
+
+    # np.random.seed(1)
+    # random_image = np.random.rand(1000, 1000)
+    # test_kernel = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
+    # t1 = time.time()
+    # convolution1 = scipy_convolution(random_image, test_kernel)
+    # print("scipy took:", time.time() - t1)
+    # t1 = time.time()
+    # convolution2 = loop_convolution(random_image, test_kernel)
+    # print("loop took:", time.time() - t1)
+    # t1 = time.time()
+    # # convolution3 = matrix_mul_convolution(random_image, test_kernel)
+    # convolution4 = sparse_matrix_mul_convolution(random_image, test_kernel)
+    # print("sparse took:", time.time() - t1)
+    # t1 = time.time()
+    # convolution5 = roll_matrix_convolution(random_image, test_kernel)
+    # print("rotate took:", time.time() - t1)
