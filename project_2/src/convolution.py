@@ -120,15 +120,45 @@ def one_convolution(input_image, kernel, method="roll", padding=False):
     elif method == "loop":
         return loop_convolution(input_image, kernel)
     
-def n_convolutions(input_image, kernels, method="roll", padding=False):
+def n_convolutions(input_image, kernels, method="scipy", padding=False):
     """
         Does n convolutions with each kernel.
         TODO: Do not do sequential.
     """
     return [one_convolution(input_image, kernel, method=method, padding=padding) for kernel in kernels]
 
-def n_3d_convolutions(input_images, kernels, method="roll", padding=False):
-    pass
+def n_3d_convolutions(input_images, kernels):
+    """
+    Convultion by creating a sparse convolution matrices,
+    then applying for each image. Returns as an iterator.
+    """
+    k_matrices = []
+    for kernel in kernels:
+        input_size = input_images[0].shape[0] * input_images[0].shape[1]
+
+        output_shape = (
+            input_images[0].shape[0] - kernel.shape[0] + 1, #We cut of the edges
+            input_images[0].shape[1] - kernel.shape[1] + 1
+        )
+
+        flattend_kernel = [k * np.ones(input_size) for k in kernel.flatten().tolist()]
+        offsets = [ind[1] + ind[0] * input_images[0].shape[1] for ind in shape_indexs(kernel.shape)]
+        kernel_sparse = sparse.dia_array(
+            (flattend_kernel, offsets), 
+            shape=(input_size, input_size)
+            ).tocsr()
+
+        row_selection = [index[1] + index[0] * input_images[0].shape[1] 
+                        for index in shape_indexs(output_shape)]
+        kernel_sparse = kernel_sparse[row_selection]
+        k_matrices.append((kernel_sparse, output_shape))
+    
+    for x in input_images:
+        yield [
+                (k_mat @ x.flatten()).reshape(out_s) 
+                for k_mat, out_s 
+                in k_matrices
+            ] 
 
 if __name__ == "__main__":
     a = np.arange(9).reshape((3,3))
