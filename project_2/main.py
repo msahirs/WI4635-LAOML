@@ -4,10 +4,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import time
 
-from src.convolution import n_convolutions, n_3d_convolutions
+from src.convolution import n_convolutions, n_3d_convolutions, rc
 from src.cnn import CNNLayer
 
-np.set_printoptions(suppress=True, linewidth=100000)
+# np.set_printoptions(suppress=True, linewidth=100000)
 
 class Timer:
     def __init__(self) -> None:
@@ -51,49 +51,81 @@ def part_one(Xtrain):
 
 def batch_split(X, y, batch_size):
     random_shuffle = np.random.choice(X.shape[0], size=X.shape[0], replace=False)
+    # random_shuffle = np.arange(X.shape[0])
     for i in range(0, X.shape[0], batch_size):
         y_split = [y[i] for i in random_shuffle[i: i + batch_size]]
         yield X[random_shuffle[i: i + batch_size]], y_split
 
+def mse_gradient(y_bars, ys):
+    """
+        Returns the gradient of MSE
+    """
+    size = sum([np.prod(y.shape) for y in ys])
+    return [2 * (y_b - y)/size for y_b, y in zip(y_bars, ys)]
 
 def part_two(Xtrain):
+    epochs = 1
+    normalize = 1
+
+    if normalize == 2: # 01 normalize
+        alpha = 0.005 # alpha 0.05
+        batch_size = 100 # batch size 100, seems to converge fast
+
+        Xtrain_min = Xtrain.min()
+        Xtrain_max = Xtrain.max()
+        Xtrain = (Xtrain - Xtrain_min)/(Xtrain_max - Xtrain_min)
+
+    elif normalize ==1: # std normalize
+        alpha = 0.001 # alpha 0.05
+        batch_size = 100 # batch size 100, seems to converge fast
+
+        Xtrain_mean = Xtrain.mean()
+        Xtrain_std = np.std(Xtrain)
+        Xtrain = (Xtrain - Xtrain_mean)/Xtrain_std
+
+    else:
+        alpha = 0.0000005 # alpha 0.0000005
+        batch_size = 100 # batch size 100, seems to converge fast
+    
     kernels = [
-        # np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]]),
         np.array([[0,-1,0],[-1,4,-1],[0,-1,0]]), # Edge detection
         np.array([[0,-1,0],[-1,5,-1],[0,-1,0]]), # Sharpen
         1/9 * np.ones((3,3)), # box blur
     ]
+    print("starting kernels")
     for k in kernels:
         print(k)
-
+    print()
     timer = Timer()
     y_conv = list(n_3d_convolutions(Xtrain, kernels))
     timer.time("y_conv")
-    conv_lay = CNNLayer(kernel_shapes=[k.shape for k in kernels], alpha=0.00000004) #0.000000001
+    conv_lay = CNNLayer(kernel_shapes=[k.shape for k in kernels], alpha=alpha) #0.000000001
     epoch = 0
-    while epoch < 3:
-        for X_batch, y_batch in batch_split(Xtrain, y_conv, 1000):
-            y_bars = conv_lay.forward_propagations(X_batch)
-            timer.time("forward")
-            deltas = [np.zeros(k.shape) for k in kernels]
-            for x, y_bar, y_real in zip(X_batch, y_bars, y_batch):
-                dL_dy = [2 * (y_b - y_r) for y_b, y_r in zip(y_bar, y_real)]
-                timer.time("dL_dy")
-                dL_dw = conv_lay.backward_propagation(x, dL_dy) # Bottle neck
-                timer.time("backward")
-                deltas = [delta + dl for delta, dl in zip(deltas, dL_dw)]
-                timer.time("deltas")
-            conv_lay.update_weights([d/X_batch.shape[0] for d in deltas])
-            timer.time("update")    
 
+    while epoch < epochs:
+        for X_batch, y_batch in batch_split(Xtrain, y_conv, batch_size):
+            y_bars = conv_lay.forward_propagations(X_batch) # Does not evaluate yet.
+            timer.time("forward")
+            dL_dys = map(
+                mse_gradient,
+                y_bars, y_batch
+                ) # This creates an iterator, so it stays lazy
+            timer.time("dl_dy")
+            conv_lay.backward_propagation(dL_dys)
+            timer.time("backward")
+
+        print(f"after epoch {epoch}")
+        for k_b, k_r in zip(conv_lay.kernels, kernels):
+            print(k_b)
+            print("max error", np.max(np.abs(k_b - k_r)))
+        print()
         epoch += 1
-        for k in conv_lay.kernels:
-            print(k)
+
     print(timer)
 
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
     part_two(Xtrain)
+    print(rc)
     # print(Xtrain.shape)
-    pass
