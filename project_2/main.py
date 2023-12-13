@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import time
 
 from src.convolution import n_convolutions, n_3d_convolutions, rc
-from src.cnn import CNNLayer
+from src.cnn import ConvNN, ConvLay
 
 # np.set_printoptions(suppress=True, linewidth=100000)
 
@@ -99,7 +99,7 @@ def part_two(Xtrain):
     timer = Timer()
     y_conv = list(n_3d_convolutions(Xtrain, kernels))
     timer.time("y_conv")
-    conv_lay = CNNLayer(kernel_shapes=[k.shape for k in kernels], alpha=alpha) #0.000000001
+    conv_lay = ConvLay(kernel_shapes=[k.shape for k in kernels], alpha=alpha) #0.000000001
     epoch = 0
 
     while epoch < epochs:
@@ -111,9 +111,9 @@ def part_two(Xtrain):
                 y_bars, y_batch
                 ) # This creates an iterator, so it stays lazy
             timer.time("dl_dy")
-            conv_lay.backward_propagation(dL_dys)
+            conv_lay.backward_propagations(dL_dys)
             timer.time("backward")
-
+            # break
         print(f"after epoch {epoch}")
         for k_b, k_r in zip(conv_lay.kernels, kernels):
             print(k_b)
@@ -123,9 +123,20 @@ def part_two(Xtrain):
 
     print(timer)
 
+def part_three(Xtrain):
+    cnn_config = {
+        "convolution": {"kernel_shapes":[(3,3), (3,3)], "alpha":0.0005},
+        "min_max_pool": {},
+        "soft_max":{}
+    }
+    cnn = ConvNN(cnn_config)
+    y_bar = cnn.forward_propagations(Xtrain)
+    cnn.backward_propagations(y_bar)
+
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
-    part_two(Xtrain)
+    # part_two(Xtrain)
+    part_three(Xtrain[:100])
     print(rc)
     # print(Xtrain.shape)
