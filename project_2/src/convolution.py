@@ -179,7 +179,28 @@ def loop_n_convolutions(input_image, kernels):
                         index[1]:index[1] + kernels.shape[1]]
         out_put_image[index] = (index_slice[..., None] * kernels).sum((0, 1))
     rc.time("loop_n")
-    return list(map(np.squeeze, np.split(out_put_image, out_put_image.shape[-1], -1)))
+    return [a[..., 0] for a in np.split(out_put_image, out_put_image.shape[-1], -1)]
+
+def loop_n_convolutions_2(input_image, kernels):
+    rc.time("wait")
+    kernels = np.stack(kernels, axis=-1)
+    out_put_image = np.zeros((
+            input_image.shape[0] - kernels.shape[0] + 1, #We cut of the edges
+            input_image.shape[1] - kernels.shape[1] + 1,
+            kernels.shape[2]
+    ))
+
+    for index in shape_indexs(kernels.shape[:-1]):
+        rc.time("out_put_nd")
+        out_put_slice = input_image[
+            index[0]:out_put_image.shape[0] + index[0],
+            index[1]:out_put_image.shape[1] + index[1]
+            ][..., None] * kernels[index]
+        rc.time("out_put_slice")
+        out_put_image += out_put_slice
+        rc.time("out_put_add")
+        
+    return [a[..., 0] for a in np.split(out_put_image, out_put_image.shape[-1], -1)]
 
 def n_convolutions(input_image, kernels, method="loop", padding=False, old=True):
     """
@@ -243,17 +264,24 @@ def n_3d_convolutions(input_images, kernels):
 
 if __name__ == "__main__":
     np.random.seed(1)
-    random_image = np.random.rand(300, 300)
-    # random_image = np.arange(16).reshape((4,4))
-    test_kernel = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
-    a = loop_convolution(random_image, test_kernel)
-    b = loop_convolution_2(random_image, test_kernel)
-    print((a- b).sum())
+    # random_image = np.random.rand(300, 300)
+    random_image = np.arange(16).reshape((4,4))
+    random_images = [np.random.rand(28, 28) for _ in range(10)]
+    test_kernels = [np.array([[0,0,0],[0,i,0],[0,0,0]]) for i in range(1,3)]
+
+    for im in random_images:
+        a = loop_n_convolutions_2(im, test_kernels)
+        b = loop_n_convolutions(im, test_kernels)
+        print([(x - y).sum() for x, y in zip(a,b)])
+    # test_kernel = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
+    # a = loop_convolution(random_image, test_kernel)
+    # b = loop_convolution_2(random_image, test_kernel)
+    # print((a- b).sum())
     # test_kernel = np.arange(9).reshape((3,3))
     # print((ind- rll).sum())
-    print(rc)
+    # print(rc)
     # random_images = [np.random.rand(28, 28) for _ in range(10000)]
-    # test_kernels = [np.array([[0,0,0],[0,i,0],[0,0,0]]) for i in range(5)]
+    # 
     # t1 = time.time()
     # r = loop_n_convolutions(random_image, test_kernels)
     # print("new", time.time() - t1)

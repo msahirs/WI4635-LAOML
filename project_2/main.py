@@ -136,7 +136,7 @@ def part_three(Xtrain):
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
-    # part_two(Xtrain)
-    part_three(Xtrain[:100])
+    part_two(Xtrain)
+    # part_three(Xtrain[:100])
     print(rc)
     # print(Xtrain.shape)

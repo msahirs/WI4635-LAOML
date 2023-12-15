@@ -6,7 +6,6 @@ from .convolution import n_convolutions, one_convolution, n_3d_convolutions
 
 class ConvLay:
     def __init__(self, kernel_shapes, alpha) -> None:
-        print(kernel_shapes, alpha)
         nodes = sum((np.prod(s) for s in kernel_shapes))
         self.kernels = [(np.random.rand(*shape) - 1/2)/np.sqrt(nodes) for shape in kernel_shapes]
         self.alpha = alpha
@@ -21,7 +20,7 @@ class ConvLay:
     def forward_propagations(self, xs): # For a big chunk of x, with same kernel, return an iterator
         self.last_input = xs
         res = n_3d_convolutions(xs, self.kernels)
-        print("Conv forward")
+        # print("Conv forward")
         if hasattr(self, "next"):
             return self.next.forward_propagations(res)
         else:
@@ -35,11 +34,11 @@ class ConvLay:
             And we return the derivatices of the cost
             function wrt to input.
         """
-        print("Conv back")
+        # print("Conv back")
         weight_deltas = [np.zeros_like(k) for k in self.kernels]
         dL_dy_total = [0 for _ in self.kernels]
         for x, dL_dy in zip(self.last_input, dL_dys):
-            dL_dw = n_convolutions(x, dL_dy)
+            dL_dw = n_convolutions(x, dL_dy, old=True)
             for i, d in enumerate(dL_dw):
                 weight_deltas[i] += d
             
