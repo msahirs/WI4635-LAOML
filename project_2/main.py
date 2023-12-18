@@ -60,8 +60,9 @@ def mse_gradient(y_bars, ys):
     """
         Returns the gradient of MSE
     """
-    size = sum([np.prod(y.shape) for y in ys])
-    return [2 * (y_b - y)/size for y_b, y in zip(y_bars, ys)]
+    # size = sum([np.prod(y.shape) for y in ys])
+    # return [2 * (y_b - y)/size for y_b, y in zip(y_bars, ys)]
+    return 2 * (y_bars - ys)/y_bars.size 
 
 def part_two(Xtrain):
     epochs = 1
@@ -76,7 +77,7 @@ def part_two(Xtrain):
         Xtrain = (Xtrain - Xtrain_min)/(Xtrain_max - Xtrain_min)
 
     elif normalize ==1: # std normalize
-        alpha = 0.001 # alpha 0.05
+        alpha = 0.003 # alpha 0.05
         batch_size = 100 # batch size 100, seems to converge fast
 
         Xtrain_mean = Xtrain.mean()
@@ -87,17 +88,16 @@ def part_two(Xtrain):
         alpha = 0.0000005 # alpha 0.0000005
         batch_size = 100 # batch size 100, seems to converge fast
     
-    kernels = [
+    kernels = np.stack([
         np.array([[0,-1,0],[-1,4,-1],[0,-1,0]]), # Edge detection
         np.array([[0,-1,0],[-1,5,-1],[0,-1,0]]), # Sharpen
         1/9 * np.ones((3,3)), # box blur
-    ]
+    ])
     print("starting kernels")
-    for k in kernels:
-        print(k)
-    print()
+    print(kernels)
     timer = Timer()
     y_conv = list(n_3d_convolutions(Xtrain, kernels))
+
     timer.time("y_conv")
     conv_lay = ConvLay(kernel_shapes=[k.shape for k in kernels], alpha=alpha) #0.000000001
     epoch = 0
@@ -113,7 +113,7 @@ def part_two(Xtrain):
             timer.time("dl_dy")
             conv_lay.backward_propagations(dL_dys)
             timer.time("backward")
-            # break
+
         print(f"after epoch {epoch}")
         for k_b, k_r in zip(conv_lay.kernels, kernels):
             print(k_b)
@@ -135,6 +135,7 @@ def part_three(Xtrain):
 
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
+    # Xtrain = np.array([[[0,1,1,0],[1,1,1,0],[0,1,0,1],[1,0,0,1]]])
     # part_one(Xtrain[:5])
     part_two(Xtrain)
     # part_three(Xtrain[:100])

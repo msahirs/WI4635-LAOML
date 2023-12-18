@@ -154,7 +154,6 @@ def one_convolution(input_image, kernel, method="loop", padding=False):
     else:
         padding_width = [(s - 1, s - 1) for s in kernel.shape]
         input_image = np.pad(input_image, padding_width)
-    # print(method)
     if method == "scipy":
         return scipy_convolution(input_image, kernel)
     elif method == "loop_alt":
@@ -168,48 +167,39 @@ def one_convolution(input_image, kernel, method="loop", padding=False):
 
 def loop_n_convolutions(input_image, kernels):
     rc.time("wait")
-    kernels = np.stack(kernels, axis=-1)
     out_put_image = np.zeros((
-            input_image.shape[0] - kernels.shape[0] + 1, #We cut of the edges
-            input_image.shape[1] - kernels.shape[1] + 1,
-            kernels.shape[2]
+            kernels.shape[0],
+            input_image.shape[0] - kernels.shape[1] + 1, #We cut of the edges
+            input_image.shape[1] - kernels.shape[2] + 1
     ))
-    for index in shape_indexs(out_put_image.shape[:-1]):
-        index_slice = input_image[index[0]:index[0] + kernels.shape[0],
-                        index[1]:index[1] + kernels.shape[1]]
-        out_put_image[index] = (index_slice[..., None] * kernels).sum((0, 1))
+
+    for index in shape_indexs(out_put_image.shape[1:]):
+        index_slice = input_image[index[0]:index[0] + kernels.shape[1],
+                        index[1]:index[1] + kernels.shape[2]]
+        out_put_image[(slice(None),) + index] = (index_slice[None, ...] * kernels).sum((1, 2))
+    
     rc.time("loop_n")
-    return [a[..., 0] for a in np.split(out_put_image, out_put_image.shape[-1], -1)]
+    return out_put_image
 
 def loop_n_convolutions_2(input_image, kernels):
     rc.time("wait")
-    kernels = np.stack(kernels, axis=-1)
     out_put_image = np.zeros((
-            input_image.shape[0] - kernels.shape[0] + 1, #We cut of the edges
-            input_image.shape[1] - kernels.shape[1] + 1,
-            kernels.shape[2]
+            kernels.shape[0],
+            input_image.shape[0] - kernels.shape[1] + 1, #We cut of the edges
+            input_image.shape[1] - kernels.shape[2] + 1
     ))
-
-    for index in shape_indexs(kernels.shape[:-1]):
+    for index in shape_indexs(kernels.shape[1:]):
         rc.time("out_put_nd")
         out_put_slice = input_image[
-            index[0]:out_put_image.shape[0] + index[0],
-            index[1]:out_put_image.shape[1] + index[1]
-            ][..., None] * kernels[index]
+            index[0]:out_put_image.shape[1] + index[0],
+            index[1]:out_put_image.shape[2] + index[1]
+            ] * kernels[(slice(None),) + index + (None, None)]
         rc.time("out_put_slice")
         out_put_image += out_put_slice
         rc.time("out_put_add")
-        
-    return [a[..., 0] for a in np.split(out_put_image, out_put_image.shape[-1], -1)]
+    return out_put_image
 
-def n_convolutions(input_image, kernels, method="loop", padding=False, old=True):
-    """
-        Does n convolutions with each kernel.
-        TODO: Do not do sequential.
-    """
-    if old:
-        return [one_convolution(input_image, kernel, method=method, padding=padding) for kernel in kernels]
-
+def n_convolutions(input_image, kernels, method="loop", padding=False):
     if not padding:
         if input_image.shape[0] < kernels[0].shape[0] or input_image.shape[1] < kernels[0].shape[1]:
             raise IndexError("Kernel is bigger then the image.")
@@ -217,7 +207,7 @@ def n_convolutions(input_image, kernels, method="loop", padding=False, old=True)
         padding_width = [(s - 1, s - 1) for s in kernels[0].shape]
         input_image = np.pad(input_image, padding_width)
 
-    return loop_n_convolutions(input_image, kernels)
+    return loop_n_convolutions_2(input_image, kernels)
 
 def n_3d_convolutions(input_images, kernels):
     """
@@ -226,14 +216,12 @@ def n_3d_convolutions(input_images, kernels):
     """
     rc.time("wait")
     k_matrices = []
-    out_shapes = []
+    output_shape = (
+        input_images[0].shape[0] - kernels.shape[1] + 1, #We cut of the edges
+        input_images[0].shape[1] - kernels.shape[2] + 1
+    )
     for kernel in kernels:
         input_size = input_images[0].shape[0] * input_images[0].shape[1]
-
-        output_shape = (
-            input_images[0].shape[0] - kernel.shape[0] + 1, #We cut of the edges
-            input_images[0].shape[1] - kernel.shape[1] + 1
-        )
 
         flattend_kernel = [k * np.ones(input_size) for k in kernel.flatten().tolist()]
         offsets = [ind[1] + ind[0] * input_images[0].shape[1] for ind in shape_indexs(kernel.shape)]
@@ -246,13 +234,6 @@ def n_3d_convolutions(input_images, kernels):
                         for index in shape_indexs(output_shape)]
         kernel_sparse = kernel_sparse[row_selection]
         k_matrices.append(kernel_sparse)
-        out_shapes.append(output_shape)
-
-    slice_shapes = []
-    start = 0
-    for s in out_shapes:
-        slice_shapes.append((slice(start, start + np.prod(s)), s))
-        start += np.prod(s)
 
     k_matrix = sparse.vstack(k_matrices)
     rc.time("matrix_setup")
@@ -260,48 +241,16 @@ def n_3d_convolutions(input_images, kernels):
         rc.time("wait")
         res = k_matrix @ x.flatten()
         rc.time("matrix_mul")
-        yield [res[slc].reshape(shape) for slc, shape in slice_shapes]
+        yield res.reshape((-1,) + output_shape)
 
 if __name__ == "__main__":
     np.random.seed(1)
     # random_image = np.random.rand(300, 300)
     random_image = np.arange(16).reshape((4,4))
-    random_images = [np.random.rand(28, 28) for _ in range(10)]
-    test_kernels = [np.array([[0,0,0],[0,i,0],[0,0,0]]) for i in range(1,3)]
+    random_images = [np.random.rand(28, 28) for _ in range(100)]
+    test_kernels = np.stack([np.array([[0,0,0],[0,i,0],[0,0,0]]) for i in range(1,3)])
 
     for im in random_images:
         a = loop_n_convolutions_2(im, test_kernels)
         b = loop_n_convolutions(im, test_kernels)
         print([(x - y).sum() for x, y in zip(a,b)])
-    # test_kernel = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
-    # a = loop_convolution(random_image, test_kernel)
-    # b = loop_convolution_2(random_image, test_kernel)
-    # print((a- b).sum())
-    # test_kernel = np.arange(9).reshape((3,3))
-    # print((ind- rll).sum())
-    # print(rc)
-    # random_images = [np.random.rand(28, 28) for _ in range(10000)]
-    # 
-    # t1 = time.time()
-    # r = loop_n_convolutions(random_image, test_kernels)
-    # print("new", time.time() - t1)
-    # t1 = time.time()
-    # r2 = n_convolutions(random_image, test_kernels)
-    # print("old", time.time() - t1)
-
-    # t1 = time.time()
-    # for im in random_images:
-    #     convolution1 = scipy_convolution(im, test_kernel)
-    # print("scipy took:", (time.time() - t1) * 1000)
-    # t1 = time.time()
-    # for im in random_images:
-    #     convolution2 = loop_convolution(im, test_kernel)
-    # print("loop took:", (time.time() - t1) * 1000)
-    # t1 = time.time()
-    # for im in random_images:
-    #     convolution4 = sparse_matrix_mul_convolution(im, test_kernel)
-    # print("sparse took:", (time.time() - t1) * 1000)
-    # t1 = time.time()
-    # for im in random_images:
-    #     convolution5 = roll_matrix_convolution(im, test_kernel)
-    # print("rotate took:", (time.time() - t1) * 1000)

@@ -2,12 +2,10 @@ import numpy as np
 from itertools import pairwise
 from .convolution import n_convolutions, one_convolution, n_3d_convolutions
 
-
-
 class ConvLay:
     def __init__(self, kernel_shapes, alpha) -> None:
         nodes = sum((np.prod(s) for s in kernel_shapes))
-        self.kernels = [(np.random.rand(*shape) - 1/2)/np.sqrt(nodes) for shape in kernel_shapes]
+        self.kernels = np.stack([(np.random.rand(*shape) - 1/2)/np.sqrt(nodes) for shape in kernel_shapes])
         self.alpha = alpha
 
     def set_next_layer(self, layer):
@@ -35,12 +33,11 @@ class ConvLay:
             function wrt to input.
         """
         # print("Conv back")
-        weight_deltas = [np.zeros_like(k) for k in self.kernels]
+        weight_deltas = np.zeros_like(self.kernels)
         dL_dy_total = [0 for _ in self.kernels]
         for x, dL_dy in zip(self.last_input, dL_dys):
-            dL_dw = n_convolutions(x, dL_dy, old=True)
-            for i, d in enumerate(dL_dw):
-                weight_deltas[i] += d
+            dL_dw = n_convolutions(x, dL_dy)
+            weight_deltas += dL_dw
             
             if dx:
                 dL_dy_total = [d + y for d, y in zip(dL_dy_total, dL_dy)]
@@ -53,11 +50,7 @@ class ConvLay:
         else:
             dL_dx = 0
 
-        self.kernels = [
-            k - self.alpha * up
-            for k, up 
-            in zip(self.kernels, weight_deltas)
-        ]
+        self.kernels = self.kernels - self.alpha * weight_deltas
         return dL_dx
 
 class MaxPool:
