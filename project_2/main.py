@@ -65,7 +65,7 @@ def mse_gradient(y_bars, ys):
     return 2 * (y_bars - ys)/y_bars.size 
 
 def part_two(Xtrain):
-    epochs = 1
+    epochs = 5
     normalize = 1
 
     if normalize == 2: # 01 normalize
@@ -123,21 +123,38 @@ def part_two(Xtrain):
 
     print(timer)
 
-def part_three(Xtrain):
+def log_loss_gradient(y_bars, ys):
+    """
+        Returns the gradient of MSE
+    """
+    return y_bars
+
+def part_three(Xtrain, ytrain):
     cnn_config = {
-        "convolution": {"kernel_shapes":[(3,3), (3,3)], "alpha":0.0005},
-        "min_max_pool": {},
-        "soft_max":{}
+        "convolution": {"kernel_shapes":[(3,3), (3,3)], "alpha":0.0000000005},
+        "min_max_pool": {"pool_shape":(2,2), "strides":(2, 2)},
+        "soft_max":{"output_length":10}
     }
-    cnn = ConvNN(cnn_config)
+    Xtrain_min = Xtrain.min()
+    Xtrain_max = Xtrain.max()
+    Xtrain = (Xtrain - Xtrain_min)/(Xtrain_max - Xtrain_min)
+
+    cnn = ConvNN(cnn_config, Xtrain.shape[1:])
     y_bar = cnn.forward_propagations(Xtrain)
-    cnn.backward_propagations(y_bar)
+    print(next(y_bar))
+    # dL_dys = map(
+    #     mse_gradient,
+    #     y_bar, ytrain
+    # ) # This creates an iterator, so it stays lazy
+    # cnn.backward_propagations(dL_dys)
+    # for k in cnn.layers[0].kernels:
+    #     print(k)
 
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
-    # Xtrain = np.array([[[0,1,1,0],[1,1,1,0],[0,1,0,1],[1,0,0,1]]])
     # part_one(Xtrain[:5])
-    part_two(Xtrain)
-    # part_three(Xtrain[:100])
+    # part_two(Xtrain)
+    # print(ytrain[0])
+    part_three(Xtrain[:1], ytrain[:1])
     print(rc)
     # print(Xtrain.shape)

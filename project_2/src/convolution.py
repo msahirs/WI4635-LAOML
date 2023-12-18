@@ -189,14 +189,12 @@ def loop_n_convolutions_2(input_image, kernels):
             input_image.shape[1] - kernels.shape[2] + 1
     ))
     for index in shape_indexs(kernels.shape[1:]):
-        rc.time("out_put_nd")
         out_put_slice = input_image[
             index[0]:out_put_image.shape[1] + index[0],
             index[1]:out_put_image.shape[2] + index[1]
             ] * kernels[(slice(None),) + index + (None, None)]
-        rc.time("out_put_slice")
         out_put_image += out_put_slice
-        rc.time("out_put_add")
+    rc.time("loop_n")
     return out_put_image
 
 def n_convolutions(input_image, kernels, method="loop", padding=False):
@@ -207,7 +205,7 @@ def n_convolutions(input_image, kernels, method="loop", padding=False):
         padding_width = [(s - 1, s - 1) for s in kernels[0].shape]
         input_image = np.pad(input_image, padding_width)
 
-    return loop_n_convolutions_2(input_image, kernels)
+    return loop_n_convolutions(input_image, kernels)
 
 def n_3d_convolutions(input_images, kernels):
     """
@@ -243,14 +241,44 @@ def n_3d_convolutions(input_images, kernels):
         rc.time("matrix_mul")
         yield res.reshape((-1,) + output_shape)
 
-if __name__ == "__main__":
-    np.random.seed(1)
-    # random_image = np.random.rand(300, 300)
-    random_image = np.arange(16).reshape((4,4))
-    random_images = [np.random.rand(28, 28) for _ in range(100)]
-    test_kernels = np.stack([np.array([[0,0,0],[0,i,0],[0,0,0]]) for i in range(1,3)])
 
-    for im in random_images:
-        a = loop_n_convolutions_2(im, test_kernels)
-        b = loop_n_convolutions(im, test_kernels)
-        print([(x - y).sum() for x, y in zip(a,b)])
+def window_max(x, window_shape, strides):
+    rc.time("wait")
+    out_put = np.zeros((
+        x.shape[0],
+        (x.shape[1] - window_shape[0])//strides[0] + 1,
+        (x.shape[2] - window_shape[1])//strides[1] + 1
+        ))
+    max_idxs = []
+
+    for index in shape_indexs(out_put.shape[1:]):
+        out_put_slice = x[
+            :,
+            strides[0] * index[0]: strides[0] * index[0] + window_shape[0],
+            strides[1] * index[1]: strides[1] * index[1] + window_shape[1],
+            ]
+        rc.time("window_slice")
+        for i, s in enumerate(out_put_slice):
+            ind = np.unravel_index(np.argmax(s, axis=None), s.shape)
+            max_idxs.append((
+                (i,) + index,
+                (i, index[0] * strides[0] + ind[0], index[1] * strides[1] + ind[1])
+            ))
+            rc.time("max_idx")
+            out_put[(i,) + index] = out_put_slice[(i,) + ind]
+            rc.time("window_max")
+    return out_put, max_idxs
+
+if __name__ == "__main__":
+    # np.random.seed(1)
+    random_image = np.floor(np.random.rand(3,4,4)*10)
+    # random_image = np.arange(32, 0, -1).reshape((4,4,2))
+    print(random_image)
+    print(window_max(random_image, (2,2), (2,2))[0])
+    # random_images = [np.random.rand(28, 28) for _ in range(100)]
+    # test_kernels = np.stack([np.array([[0,0,0],[0,i,0],[0,0,0]]) for i in range(1,3)])
+
+    # for im in random_images:
+    #     a = loop_n_convolutions_2(im, test_kernels)
+    #     b = loop_n_convolutions(im, test_kernels)
+    #     print([(x - y).sum() for x, y in zip(a,b)])
