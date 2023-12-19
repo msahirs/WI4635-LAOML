@@ -58,8 +58,11 @@ class ConvLay:
             ])
         else:
             dL_dx = 0
-
         self.kernels = self.kernels - self.alpha * weight_deltas
+
+        if np.abs(self.kernels).max() > 1e6:
+            raise RuntimeError("Diverging kernel")
+        
         if hasattr(self, "previous"):
             return self.previous.backward_propagations(dL_dx)
         else:
@@ -130,6 +133,9 @@ class MaxPool:
             "strides": self.strides,
         }
     
+    
+
+
 
 class SoftMax:
     def __init__(self, input_shape, output_length, alpha) -> None:
@@ -138,6 +144,7 @@ class SoftMax:
         self.alpa = alpha
         self.weights = np.random.rand(*(output_length, np.prod(input_shape)))
         self.biases = np.random.rand(output_length)
+        self.last = False
 
     def set_next_layer(self, layer):
         self.next = layer
@@ -148,10 +155,13 @@ class SoftMax:
 
     def forward_iterator(self, xs):
         self.last_inputs = []
+        self.last_res = []
         for x in xs:
             self.last_inputs.append(x)
             inp = np.exp(self.weights @ x.flatten() + self.biases)
             res = inp/inp.sum()
+            if not self.last:
+                self.last_res.append(res)
             yield res
 
     def forward_propagations(self, xs):
@@ -161,13 +171,12 @@ class SoftMax:
         else:
             return res
         
-    def backward_propagations(self, ys):
+    def backward_last(self, ys):
         dL_dw = np.zeros_like(self.weights)
         dL_db = np.zeros_like(self.biases)
         dL_dxs = []
         for y_bar, y in ys:
             inp = self.last_inputs.pop(0)
-            # A = (np.outer(-res, res) + np.diag(res)) @ dL_dy
             A = y_bar - y
             dL_dw += np.outer(A, inp.flatten())
             dL_db += A
@@ -180,6 +189,32 @@ class SoftMax:
             return self.previous.backward_propagations(dL_dxs)
         else:
             return dL_dxs
+
+    def backward_middle(self, dL_dys):
+        dL_dw = np.zeros_like(self.weights)
+        dL_db = np.zeros_like(self.biases)
+        dL_dxs = []
+        for dL_dy in dL_dys:
+            inp = self.last_inputs.pop(0)
+            res = self.last_res.pop(0)
+            A = (np.outer(-res, res) + np.diag(res)) @ dL_dy
+            dL_dw += np.outer(A, inp.flatten())
+            dL_db += A
+            dL_dxs.append((A @ self.weights).reshape(self.input_shape))
+
+        self.weights = self.weights - self.alpa * dL_dw
+        self.biases = self.biases - self.alpa * dL_db
+
+        if hasattr(self, "previous"):
+            return self.previous.backward_propagations(dL_dxs)
+        else:
+            return dL_dxs
+        
+    def backward_propagations(self, ys):
+        if self.last:
+            return self.backward_last(ys)
+        else:
+            return self.backward_middle(ys)
         
     def save_obj(self):
         return {
@@ -206,6 +241,8 @@ class ConvNN:
         
         for prev, next in pairwise(self.layers):
             prev.set_next_layer(next)
+
+        self.layers[-1].last = True
     
     def forward_propagations(self, xs):
         return self.layers[0].forward_propagations(xs)
