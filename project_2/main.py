@@ -123,38 +123,68 @@ def part_two(Xtrain):
 
     print(timer)
 
-def log_loss_gradient(y_bars, ys):
+def log_loss_gradient(y_bar, y):
     """
         Returns the gradient of MSE
     """
-    return y_bars
+    return -y * (1/y_bar)
 
-def part_three(Xtrain, ytrain):
+def log_loss(y_bar, y):
+    return - y @ np.log(y_bar)
+
+def to_one_hot_vector(y):
+    one_hot = np.zeros(10)
+    one_hot[y] = 1
+    return one_hot
+
+def part_three(Xtrain, ytrain, Xtest, ytest):
+    # Configs
     cnn_config = {
-        "convolution": {"kernel_shapes":[(3,3), (3,3)], "alpha":0.0000000005},
+        "convolution": {"kernel_shapes":[(3,3), (3,3)], "alpha":0.0005},
         "min_max_pool": {"pool_shape":(2,2), "strides":(2, 2)},
-        "soft_max":{"output_length":10}
+        "soft_max":{"output_length":10, "alpha":0.0005}
     }
+    cnn = ConvNN(cnn_config, Xtrain.shape[1:])
+    timer = Timer()
+
+    epochs = 1
+    batch_size = 10
+
+    # Normalize
     Xtrain_min = Xtrain.min()
     Xtrain_max = Xtrain.max()
     Xtrain = (Xtrain - Xtrain_min)/(Xtrain_max - Xtrain_min)
 
-    cnn = ConvNN(cnn_config, Xtrain.shape[1:])
-    y_bar = cnn.forward_propagations(Xtrain)
-    print(next(y_bar))
-    # dL_dys = map(
-    #     mse_gradient,
-    #     y_bar, ytrain
-    # ) # This creates an iterator, so it stays lazy
-    # cnn.backward_propagations(dL_dys)
-    # for k in cnn.layers[0].kernels:
-    #     print(k)
+    Xtest_min = Xtest.min()
+    Xtest_max = Xtest.max()
+    Xtest = (Xtest - Xtest_min)/(Xtest_max - Xtest_min)
+
+    ytrain = list(map(to_one_hot_vector, ytrain))
+    ytest = list(map(to_one_hot_vector, ytest))
+    
+    epoch = 0
+    while epoch < epochs:
+        for X_batch, y_batch in batch_split(Xtrain, ytrain, batch_size):
+            y_bars = cnn.forward_propagations(X_batch)
+            timer.time("forward")
+            cnn.backward_propagations(zip(y_bars, y_batch))
+            timer.time("backward")
+        epoch += 1
+        
+    print(f"after epoch {epoch}")
+    y_bars = cnn.forward_propagations(Xtest)
+    losses = map(
+        log_loss,
+        y_bars, ytest
+    )
+    print(sum(losses))
+    print(timer)
+
 
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
     # part_two(Xtrain)
-    # print(ytrain[0])
-    part_three(Xtrain[:1], ytrain[:1])
+    part_three(Xtrain, ytrain, Xtest, ytest)
     print(rc)
     # print(Xtrain.shape)
