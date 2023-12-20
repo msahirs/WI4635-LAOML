@@ -117,7 +117,7 @@ class MaxPool:
             max_indices = self.last_maxs.pop(0)
             res = np.zeros(self.last_shapes.pop(0))
             for src, tar in max_indices:
-                res[tar] = dL[src]
+                res[tar] += dL[src]
             yield res
     
     def backward_propagations(self, dL_dys):
@@ -133,9 +133,6 @@ class MaxPool:
             "strides": self.strides,
         }
     
-    
-
-
 
 class SoftMax:
     def __init__(self, input_shape, output_length, alpha) -> None:
@@ -184,7 +181,8 @@ class SoftMax:
 
         self.weights = self.weights - self.alpa * dL_dw
         self.biases = self.biases - self.alpa * dL_db
-
+        if np.abs(self.weights).max() > 1e6 or np.abs(self.biases).max() > 1e6:
+            raise RuntimeError("Diverging softmax")
         if hasattr(self, "previous"):
             return self.previous.backward_propagations(dL_dxs)
         else:

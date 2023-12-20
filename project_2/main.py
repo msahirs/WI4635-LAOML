@@ -145,15 +145,15 @@ def to_one_hot_vector(y):
 def part_three(Xtrain, ytrain, Xtest, ytest):
     # Configs
     cnn_config = {
-        "convolution": {"kernel_shapes":[(3,3), (3,3)], "alpha":0.0005},
+        "convolution": {"kernel_shapes":[(3,3)] * 3, "alpha":0.02},
         "min_max_pool": {"pool_shape":(2,2), "strides":(2, 2)},
-        "soft_max":{"output_length":10, "alpha":0.0005}
+        "soft_max":{"output_length":10, "alpha":0.001}
     }
     cnn = ConvNN(cnn_config, Xtrain.shape[1:])
     timer = Timer()
 
     epochs = 1
-    batch_size = 10
+    batch_size = 50
 
     # Normalize
     Xtrain_min = Xtrain.min()
@@ -184,12 +184,20 @@ def part_three(Xtrain, ytrain, Xtest, ytest):
     )
     print(sum(losses))
     print(timer)
+    print(rc)
+
+def k_cross_validate(Xtrain, ytrain):
+    Xtrain_min = Xtrain.min()
+    Xtrain_max = Xtrain.max()
+    Xtrain = (Xtrain - Xtrain_min)/(Xtrain_max - Xtrain_min)
+    ytrain = list(map(to_one_hot_vector, ytrain))
+
 
 
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
-    part_two(Xtrain)
-    # part_three(Xtrain, ytrain, Xtest, ytest)
+    # part_two(Xtrain)
+    part_three(Xtrain, ytrain, Xtest, ytest)
     # print(rc)
     # print(Xtrain.shape)
