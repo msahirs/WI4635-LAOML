@@ -134,7 +134,65 @@ class MaxPool:
         }
     
     
+class AvgPool:
+    def __init__(self, pool_shape, strides, input_shape):
+        self.pool_shape = pool_shape
+        self.strides = strides
+        self.input_shape = input_shape
 
+    @property
+    def output_shape(self):
+        return (
+            self.input_shape[0],
+            (self.input_shape[1] - self.pool_shape[0])//self.strides[0] + 1,
+            (self.input_shape[2] - self.pool_shape[1])//self.strides[1] + 1,
+        )
+
+    def set_next_layer(self, layer):
+        self.next = layer
+        layer.set_previous_layer(self)
+
+    def set_previous_layer(self, layer):
+        self.previous = layer
+
+    def window_iterator(self, xs):
+        self.last_maxs = []
+        self.last_shapes = []
+        for x in xs:
+            res, max_msk = window_max(x, self.pool_shape, self.strides)
+            self.last_maxs.append(max_msk)
+            self.last_shapes.append(x.shape)
+            yield res
+
+    def forward_propagations(self, xs):
+        self.last_input = xs
+        res = self.window_iterator(xs)
+        if hasattr(self, "next"):
+            return self.next.forward_propagations(res)
+        else:
+            return res
+        
+    def back_iterator(self, dL_dys):
+        for dL in dL_dys:
+            max_indices = self.last_maxs.pop(0)
+            res = np.zeros(self.last_shapes.pop(0))
+            for src, tar in max_indices:
+                res[tar] = dL[src]
+            yield res
+    
+    def backward_propagations(self, dL_dys):
+        res = self.back_iterator(dL_dys)
+        if hasattr(self, "previous"):
+            return self.previous.backward_propagations(res)
+        else:
+            return res
+        
+    def save_obj(self):
+        return {
+            "pool_shape": self.pool_shape,
+            "strides": self.strides,
+        }
+    
 
 
 class SoftMax:
@@ -227,6 +285,7 @@ class ConvNN:
     lay_map = {
         "convolution": ConvLay,
         "min_max_pool":MaxPool,
+        "avg_pool":AvgPool,
         "soft_max":SoftMax
     }
 
