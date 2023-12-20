@@ -146,7 +146,7 @@ def part_three(Xtrain, ytrain, Xtest, ytest):
     # Configs
     cnn_config = {
         "convolution": {"kernel_shapes":[(3,3), (3,3)], "alpha":0.0005},
-        "min_max_pool": {"pool_shape":(2,2), "strides":(2, 2)},
+        "avg_pool": {"pool_shape":(2,2), "strides":(2, 2)},
         "soft_max":{"output_length":10, "alpha":0.0005}
     }
     cnn = ConvNN(cnn_config, Xtrain.shape[1:])
@@ -189,7 +189,7 @@ def part_three(Xtrain, ytrain, Xtest, ytest):
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
-    part_two(Xtrain)
-    # part_three(Xtrain, ytrain, Xtest, ytest)
+    # part_two(Xtrain)
+    part_three(Xtrain, ytrain, Xtest, ytest)
     # print(rc)
     # print(Xtrain.shape)
