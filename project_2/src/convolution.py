@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
 from scipy import signal, sparse
 import time, itertools
 
@@ -296,6 +297,29 @@ def window_max(x, window_shape, strides):
             output[(i,) + index] = output_slice[(i, ind)]
             rc.time("output_2")
     return output, max_idxs
+
+def window_avg(x_windows, window_shape, strides):
+
+    rc.time("wait")
+
+    out_put = np.zeros((x_windows.shape[0],
+        (x_windows.shape[1] - window_shape[0])//strides[0] + 1,
+        (x_windows.shape[2] - window_shape[1])//strides[1] + 1
+        ))
+    
+    max_idxs = [] # to be replaced
+
+    for i, x in enumerate(x_windows):
+
+        shape_w = (out_put.shape[1], out_put.shape[2], window_shape[0], window_shape[1])
+        strides_w = (strides[0]*x.strides[0], strides[0]*x.strides[1], x.strides[0], x.strides[1])
+        
+        x_w = as_strided(x, shape_w, strides_w)
+        rc.time("window_slice")
+
+        out_put[i] = x_w.mean(axis=(2, 3))
+
+    return out_put, max_idxs
 
 if __name__ == "__main__":
     np.random.seed(1)
