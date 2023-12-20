@@ -59,7 +59,6 @@ class ConvLay:
         else:
             dL_dx = 0
         self.kernels = self.kernels - self.alpha * weight_deltas
-
         if np.abs(self.kernels).max() > 1e6:
             raise RuntimeError("Diverging kernel")
         
@@ -213,8 +212,8 @@ class SoftMax:
         self.input_shape = input_shape
         self.output_shape = output_length
         self.alpa = alpha
-        self.weights = np.random.rand(*(output_length, np.prod(input_shape)))
-        self.biases = np.random.rand(output_length)
+        self.weights = np.zeros((output_length, np.prod(input_shape)))#np.random.rand(*)
+        self.biases = np.zeros(output_length)
         self.last = False
 
     def set_next_layer(self, layer):
