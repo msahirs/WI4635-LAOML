@@ -1,6 +1,6 @@
 import numpy as np
 from itertools import pairwise
-from .convolution import n_convolutions, one_convolution, n_3d_convolutions, window_max, Timer, window_avg
+from .convolution import n_convolutions, one_convolution, n_3d_convolutions, window_max, Timer, window_avg, window_max_test
 
 class ConvLay:
     def __init__(self, kernel_shapes, alpha, input_shape) -> None:
@@ -99,6 +99,7 @@ class MaxPool:
         self.last_shapes = []
         for x in xs:
             res, max_msk = window_max(x, self.pool_shape, self.strides)
+            # res, max_msk = window_max_test(x, self.pool_shape, self.strides)
             self.last_maxs.append(max_msk)
             self.last_shapes.append(x.shape)
             yield res
@@ -118,9 +119,29 @@ class MaxPool:
             for src, tar in max_indices:
                 res[tar] += dL[src]
             yield res
+
+    def back_iterator_test(self, dL_dys):
+        for dL in dL_dys:
+            res = np.zeros(self.last_shapes.pop(0))
+            max_indices = self.last_maxs.pop(0)
+            int_c = 0
+            # print(c, "of", len(dL_dys))
+            for m in range(res.shape[0]):
+                for h in range(dL.shape[0]):                   # loop on the vertical axis
+                    for w in range(dL.shape[1]):               # loop on the horizontal axis
+                        vert_start  = h*self.strides[0]
+                        vert_end    = vert_start + self.pool_shape[0]
+                        horiz_start = w*self.strides[1]
+                        horiz_end   = horiz_start + self.pool_shape[1]
+
+                        res[m,vert_start:vert_end, horiz_start:horiz_end] += np.multiply(max_indices[int_c], dL[m, h, w])
+                        int_c += 1
+                        # print(int_c)
+            yield res
     
     def backward_propagations(self, dL_dys):
         res = self.back_iterator(dL_dys)
+        # res = self.back_iterator_test(dL_dys)
         if hasattr(self, "previous"):
             return self.previous.backward_propagations(res)
         else:
@@ -178,7 +199,6 @@ class AvgPool:
 
     def back_iterator(self, dL_dys):
         for dL in dL_dys:
-
             res = np.zeros(self.last_shapes.pop(0))
 
             for m in range(res.shape[0]):

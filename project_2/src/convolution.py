@@ -298,6 +298,38 @@ def window_max(x, window_shape, strides):
             rc.time("output_2")
     return output, max_idxs
 
+def window_max_test(x_windows, window_shape, strides):
+
+    rc.time("wait")
+    max_masks = []
+    out_put = np.zeros((x_windows.shape[0],
+        (x_windows.shape[1] - window_shape[0])//strides[0] + 1,
+        (x_windows.shape[2] - window_shape[1])//strides[1] + 1
+        ))
+
+    for i, x in enumerate(x_windows):
+
+        # shape_w = (out_put.shape[1], out_put.shape[2], window_shape[0], window_shape[1])
+        # strides_w = (strides[0]*x.strides[0], strides[0]*x.strides[1], x.strides[0], x.strides[1])
+        
+        # x_w = as_strided(x, shape_w, strides_w)
+        # rc.time("window_slice_test")
+        # temp = x_w.max(axis=(2, 3))
+        
+        for h in range(out_put.shape[1]):                   # loop on the vertical axis
+            for w in range(out_put.shape[2]):               # loop on the horizontal axis
+                vert_start  = h*strides[0]
+                vert_end    = vert_start + window_shape[0]
+                horiz_start = w*strides[1]
+                horiz_end   = horiz_start + window_shape[1]
+                x_slice = x[vert_start:vert_end, horiz_start:horiz_end]
+                out_put[i,h,w] = np.max(x_slice)
+
+                max_masks.append(x_slice == out_put[i,h,w])
+        rc.time("max_out_test")
+    
+    return out_put, max_masks
+
 def window_avg(x_windows, window_shape, strides):
 
     rc.time("wait")
