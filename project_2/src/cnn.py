@@ -211,7 +211,7 @@ class SoftMax:
     def __init__(self, input_shape, output_length, alpha) -> None:
         self.input_shape = input_shape
         self.output_shape = output_length
-        self.alpa = alpha
+        self.alpha = alpha
         self.weights = np.zeros((output_length, np.prod(input_shape)))#np.random.rand(*)
         self.biases = np.zeros(output_length)
         self.last = False
@@ -252,8 +252,8 @@ class SoftMax:
             dL_db += A
             dL_dxs.append((A @ self.weights).reshape(self.input_shape))
 
-        self.weights = self.weights - self.alpa * dL_dw
-        self.biases = self.biases - self.alpa * dL_db
+        self.weights = self.weights - self.alpha * dL_dw
+        self.biases = self.biases - self.alpha * dL_db
         if np.abs(self.weights).max() > 1e6 or np.abs(self.biases).max() > 1e6:
             raise RuntimeError("Diverging softmax")
         if hasattr(self, "previous"):
@@ -273,8 +273,8 @@ class SoftMax:
             dL_db += A
             dL_dxs.append((A @ self.weights).reshape(self.input_shape))
 
-        self.weights = self.weights - self.alpa * dL_dw
-        self.biases = self.biases - self.alpa * dL_db
+        self.weights = self.weights - self.alpha * dL_dw
+        self.biases = self.biases - self.alpha * dL_db
 
         if hasattr(self, "previous"):
             return self.previous.backward_propagations(dL_dxs)
