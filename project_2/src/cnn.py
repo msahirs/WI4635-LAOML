@@ -69,8 +69,7 @@ class ConvLay:
         
     def save_obj(self):
         return {
-            "kernels": self.kernels,
-            "alpha": self.alpha,
+            "kernels": self.kernels
         }
 
 class MaxPool:
@@ -149,8 +148,6 @@ class MaxPool:
         
     def save_obj(self):
         return {
-            "pool_shape": self.pool_shape,
-            "strides": self.strides,
         }
     
     
@@ -222,8 +219,6 @@ class AvgPool:
         
     def save_obj(self):
         return {
-            "pool_shape": self.pool_shape,
-            "strides": self.strides,
         }
     
 
@@ -310,7 +305,7 @@ class SoftMax:
     def save_obj(self):
         return {
             "weights": self.weights,
-            "biases": self.biases
+            "biases": self.biases,
         }
     
         
@@ -325,6 +320,7 @@ class ConvNN:
     def __init__(self, config, input_shape):
         self.layers = []
         self.lay_names = []
+        self.config = config
         for k, v in config.items():
             v.update({"input_shape":input_shape})
             self.layers.append(self.lay_map[k](**v))
@@ -348,22 +344,19 @@ class ConvNN:
             y_split = [y[i] for i in random_shuffle[i: i + batch_size]]
             yield X[random_shuffle[i: i + batch_size]], y_split
 
-    def mse_loss(self, y_bars, ys):
-        pass
+    def mse_loss(self, y_bar, y):
+        return ((y_bar - y)**2).mean()
 
-    def mse_gradient(self, y_bars, ys):
-        """
-            Returns the gradient of MSE
-        """
-        return 2 * (y_bars - ys)/y_bars.size
+    def mse_gradient(self, y_bar, y):
+        return 2 * (y_bar - y)/y_bar.size
     
     def log_loss(self, y_bar, y):
         return - y @ np.log(y_bar)
 
+    def log_loss_batch(self, y_bars, ys):
+        return - (ys * np.log(y_bars)).sum(1)
+
     def log_loss_gradient(self, y_bar, y):
-        """
-            Returns the gradient of MSE
-        """
         return -y * (1/y_bar)
     
     def loss_handler(self, loss_function, y_bars, ys):
@@ -373,7 +366,6 @@ class ConvNN:
                     y_bars, ys
                 )
         elif loss_function == "cross_entropy" and isinstance(self.layers[-1], SoftMax):
-            print("quick route")
             return zip(y_bars, ys)
         elif loss_function == "cross_entropy":
             return map(
@@ -393,10 +385,16 @@ class ConvNN:
             print(f"epoch {epoch} finished")
             epoch += 1
 
-    
     def save(self):
-        objs = [(name, lay.save_obj) for name, lay in zip(self.lay_name, self.layers)]
+        objs = [("NN", {"config":self.config, "input_shape":self.input_shape})] + [(name, lay.save_obj) for name, lay in zip(self.lay_name, self.layers)]
+        return objs
         #write objs
     
-    def load(self):
-        pass
+    @classmethod
+    def load(self, objs):
+        init_vars = objs.pop(0)
+        new = ConvNN(**init_vars[1])
+        for lay, weights in zip(new.layers, objs):
+            for k, v in weights.items():
+                setattr(lay, k, v)
+        return new

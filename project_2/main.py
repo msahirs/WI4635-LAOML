@@ -3,6 +3,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import time
+import pickle
 from itertools import product
 
 from src.convolution import n_convolutions, n_3d_convolutions, rc, one_convolution
@@ -149,23 +150,27 @@ def part_three(Xtrain, ytrain, Xtest, ytest):
     ytrain = list(map(to_one_hot_vector, ytrain))
     ytest = list(map(to_one_hot_vector, ytest))
 
-    cnn.train(
-        Xtrain,
-        ytrain,
-        batch_size,
-        loss_function="cross_entropy",
-        epochs=epochs
-    )
-        
-    y_bars = cnn.forward_propagations(Xtest)
+    for i in range(10):
+        cnn.train(
+            Xtrain,
+            ytrain,
+            batch_size,
+            loss_function="cross_entropy",
+            epochs=1
+        )
+        model_weights = cnn.save()
+        with open("models", 'a+b') as fp:
+            pickle.dump(model_weights, fp)
 
-    losses = map(
-        cnn.log_loss,
-        y_bars, ytest
-    )
-    print(sum(losses))
-    print(timer)
-    print(rc)
+        y_bars = cnn.forward_propagations(Xtest)
+
+        losses = map(
+            cnn.log_loss,
+            y_bars, ytest
+        )
+        print(sum(losses))
+        print(timer)
+        print(rc)
 
 def k_cross_validate(Xtrain, ytrain):
     Xtrain_min = Xtrain.min()
@@ -182,8 +187,8 @@ def k_cross_validate(Xtrain, ytrain):
         [0.002, 0.001, 0.0005]
     ]
 
-    for shape, num, alpha_k, alpha_s in product(*options):
-        print(shape, num, alpha_k, alpha_s)
+    for comb, (shape, num, alpha_k, alpha_s) in enumerate(product(*options)):
+        print(comb, shape, num, alpha_k, alpha_s)
         cnn_config = {
             "convolution": {"kernel_shapes":[shape] * num, "alpha":alpha_k},
             "min_max_pool": {"pool_shape":(2,2), "strides":(2, 2)},
@@ -210,9 +215,11 @@ def k_cross_validate(Xtrain, ytrain):
                 batch_size=50,
                 loss_function="cross_entropy"
             )
+            timer.time("train")
             print("predicting")
-            y_bars = cnn.forward_propagations(k_split[k][0])
+            y_bars = list(cnn.forward_propagations(k_split[k][0]))
             timer.time("predict")
+
             loss = sum(map(
                 cnn.log_loss,
                 y_bars, k_split[k][1]
@@ -220,17 +227,38 @@ def k_cross_validate(Xtrain, ytrain):
             timer.time("loss")
             print(loss)
             print(timer)
+            print(rc)
             losses.append(loss)
-        
-        break
-        
+        result = {
+            "shape":shape, 
+            "number":num, 
+            "kernel_alpha": alpha_k, 
+            "softmax_alpha":alpha_s,
+            "losses":losses
+        }
+        print(result)
+        with open("k-fold_test", 'a+b') as fp:
+            pickle.dump(result, fp)
+
+def test_case():
+    data = []
+    with open("k-fold_test", 'rb') as fr:
+        try:
+            while True:
+                data.append(pickle.load(fr))
+        except EOFError:
+            pass
+    for d in data:
+        print(d, sum(d["losses"])/3)
+    return data
 
 
 if __name__== "__main__":
-    (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
+    # (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
-    part_two(Xtrain)
+    # part_two(Xtrain)
     # part_three(Xtrain, ytrain, Xtest, ytest)
     # k_cross_validate(Xtrain, ytrain)
+    test_case()
     # print(rc)
     # print(Xtrain.shape)
