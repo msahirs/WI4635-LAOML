@@ -60,14 +60,6 @@ def batch_split(X, y, batch_size):
         y_split = [y[i] for i in random_shuffle[i: i + batch_size]]
         yield X[random_shuffle[i: i + batch_size]], y_split
 
-def mse_gradient(y_bars, ys):
-    """
-        Returns the gradient of MSE
-    """
-    # size = sum([np.prod(y.shape) for y in ys])
-    # return [2 * (y_b - y)/size for y_b, y in zip(y_bars, ys)]
-    return 2 * (y_bars - ys)/y_bars.size 
-
 def part_two(Xtrain):
     epochs = 1
     normalize = 2
@@ -104,39 +96,28 @@ def part_two(Xtrain):
     y_conv = list(n_3d_convolutions(Xtrain, kernels))
 
     timer.time("y_conv")
-    conv_lay = ConvLay(kernel_shapes=[k.shape for k in kernels], alpha=alpha, input_shape=Xtrain[0].shape) #0.000000001
-    epoch = 0
+    # conv_lay = ConvLay(kernel_shapes=[k.shape for k in kernels], alpha=alpha, input_shape=Xtrain[0].shape) #0.000000001
+    cnn_config = {
+        "convolution": {"kernel_shapes":[(3,3)] * 3, "alpha":alpha},
+    }
+    cnn = ConvNN(cnn_config, Xtrain.shape[1:])
 
-    while epoch < epochs:
-        for X_batch, y_batch in batch_split(Xtrain, y_conv, batch_size):
-            y_bars = conv_lay.forward_propagations(X_batch) # Does not evaluate yet.
-            # timer.time("forward")
-            dL_dys = map(
-                mse_gradient,
-                y_bars, y_batch
-                ) # This creates an iterator, so it stays lazy
-            # timer.time("dl_dy")
-            conv_lay.backward_propagations(dL_dys)
-            # timer.time("backward")
-        timer.time("epoch")
-        print(f"after epoch {epoch}")
-        for k_b, k_r in zip(conv_lay.kernels, kernels):
-            print(k_b)
-            print("max error", np.max(np.abs(k_b - k_r)))
-        print("MSE", ((conv_lay.kernels - kernels)**2).mean())
-        print()
-        epoch += 1
+    cnn.train(
+        Xtrain, 
+        y_conv, 
+        batch_size,
+        loss_function="MSE",
+        epochs=epochs
+    )
+    timer.time("epoch")
 
+    print(f"after epoch")
+
+    for k_b, k_r in zip(cnn.layers[0].kernels, kernels):
+        print(k_b)
+        print("max error", np.max(np.abs(k_b - k_r)))
+    print("MSE", ((cnn.layers[0].kernels - kernels)**2).mean())
     print(timer)
-
-def log_loss_gradient(y_bar, y):
-    """
-        Returns the gradient of MSE
-    """
-    return -y * (1/y_bar)
-
-def log_loss(y_bar, y):
-    return - y @ np.log(y_bar)
 
 def to_one_hot_vector(y):
     one_hot = np.zeros(10)
@@ -167,20 +148,19 @@ def part_three(Xtrain, ytrain, Xtest, ytest):
 
     ytrain = list(map(to_one_hot_vector, ytrain))
     ytest = list(map(to_one_hot_vector, ytest))
-    
-    epoch = 0
-    while epoch < epochs:
-        for X_batch, y_batch in batch_split(Xtrain, ytrain, batch_size):
-            y_bars = cnn.forward_propagations(X_batch)
-            timer.time("forward")
-            cnn.backward_propagations(zip(y_bars, y_batch))
-            timer.time("backward")
-        epoch += 1
+
+    cnn.train(
+        Xtrain,
+        ytrain,
+        batch_size,
+        loss_function="cross_entropy",
+        epochs=epochs
+    )
         
-    print(f"after epoch {epoch}")
     y_bars = cnn.forward_propagations(Xtest)
+
     losses = map(
-        log_loss,
+        cnn.log_loss,
         y_bars, ytest
     )
     print(sum(losses))
@@ -224,25 +204,24 @@ def k_cross_validate(Xtrain, ytrain):
             print(k_Xtrain.shape)
             timer.time("setup")
             print("training")
-            for i, (X_batch, y_batch) in enumerate(batch_split(k_Xtrain, k_ytrain, 50)):
-                y_bars = cnn.forward_propagations(X_batch)
-                timer.time("forward")
-                cnn.backward_propagations(zip(y_bars, y_batch))
-                timer.time("backward")
-            print(cnn.layers[0].kernels)
-            print(cnn.layers[2].biases)
+            cnn.train(
+                k_Xtrain,
+                k_ytrain,
+                batch_size=50,
+                loss_function="cross_entropy"
+            )
             print("predicting")
             y_bars = cnn.forward_propagations(k_split[k][0])
             timer.time("predict")
             loss = sum(map(
-                log_loss,
+                cnn.log_loss,
                 y_bars, k_split[k][1]
             ))
             timer.time("loss")
             print(loss)
             print(timer)
             losses.append(loss)
-            break
+        
         break
         
 
@@ -250,8 +229,8 @@ def k_cross_validate(Xtrain, ytrain):
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
-    # part_two(Xtrain)
+    part_two(Xtrain)
     # part_three(Xtrain, ytrain, Xtest, ytest)
-    k_cross_validate(Xtrain, ytrain)
+    # k_cross_validate(Xtrain, ytrain)
     # print(rc)
     # print(Xtrain.shape)

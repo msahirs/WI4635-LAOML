@@ -342,6 +342,58 @@ class ConvNN:
     def backward_propagations(self, dL_dy):
         return self.layers[-1].backward_propagations(dL_dy)
     
+    def batch_split(self, X, y, batch_size):
+        random_shuffle = np.random.choice(X.shape[0], size=X.shape[0], replace=False)
+        for i in range(0, X.shape[0], batch_size):
+            y_split = [y[i] for i in random_shuffle[i: i + batch_size]]
+            yield X[random_shuffle[i: i + batch_size]], y_split
+
+    def mse_loss(self, y_bars, ys):
+        pass
+
+    def mse_gradient(self, y_bars, ys):
+        """
+            Returns the gradient of MSE
+        """
+        return 2 * (y_bars - ys)/y_bars.size
+    
+    def log_loss(self, y_bar, y):
+        return - y @ np.log(y_bar)
+
+    def log_loss_gradient(self, y_bar, y):
+        """
+            Returns the gradient of MSE
+        """
+        return -y * (1/y_bar)
+    
+    def loss_handler(self, loss_function, y_bars, ys):
+        if loss_function == "MSE":
+            return map(
+                    self.mse_gradient,
+                    y_bars, ys
+                )
+        elif loss_function == "cross_entropy" and isinstance(self.layers[-1], SoftMax):
+            print("quick route")
+            return zip(y_bars, ys)
+        elif loss_function == "cross_entropy":
+            return map(
+                    self.log_loss_gradient,
+                    y_bars, ys
+                )
+        else:
+            raise ValueError("Not a valid loss function")
+    
+    def train(self, Xtrain, ytrain, batch_size, loss_function, epochs=1):
+        epoch = 0
+        while epoch < epochs:
+            for X_batch, y_batch in self.batch_split(Xtrain, ytrain, batch_size):
+                y_bars = self.forward_propagations(X_batch)
+                loss_f = self.loss_handler(loss_function, y_bars, y_batch)
+                self.backward_propagations(loss_f)
+            print(f"epoch {epoch} finished")
+            epoch += 1
+
+    
     def save(self):
         objs = [(name, lay.save_obj) for name, lay in zip(self.lay_name, self.layers)]
         #write objs
