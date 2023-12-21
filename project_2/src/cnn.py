@@ -159,7 +159,7 @@ class AvgPool:
         self.last_maxs = []
         self.last_shapes = []
         for x in xs:
-            res, _ = window_avg(x, self.pool_shape, self.strides)
+            res = window_avg(x, self.pool_shape, self.strides)
             self.last_shapes.append(x.shape)
             yield res
 

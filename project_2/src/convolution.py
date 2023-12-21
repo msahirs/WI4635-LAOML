@@ -306,8 +306,6 @@ def window_avg(x_windows, window_shape, strides):
         (x_windows.shape[1] - window_shape[0])//strides[0] + 1,
         (x_windows.shape[2] - window_shape[1])//strides[1] + 1
         ))
-    
-    max_idxs = [] # to be replaced
 
     for i, x in enumerate(x_windows):
 
@@ -318,8 +316,8 @@ def window_avg(x_windows, window_shape, strides):
         rc.time("window_slice")
 
         out_put[i] = x_w.mean(axis=(2, 3))
-
-    return out_put, max_idxs
+        rc.time("avg_out")
+    return out_put
 
 if __name__ == "__main__":
     np.random.seed(1)
