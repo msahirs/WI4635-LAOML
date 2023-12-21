@@ -3,6 +3,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import time
+from itertools import product
 
 from src.convolution import n_convolutions, n_3d_convolutions, rc, one_convolution
 from src.cnn import ConvNN, ConvLay
@@ -192,12 +193,65 @@ def k_cross_validate(Xtrain, ytrain):
     Xtrain = (Xtrain - Xtrain_min)/(Xtrain_max - Xtrain_min)
     ytrain = list(map(to_one_hot_vector, ytrain))
 
+    k_split = list(batch_split(Xtrain, ytrain, 20000))
+
+    options = [
+        [(3,3), (5,5)],
+        [3,5],
+        [0.02, 0.01, 0.005],
+        [0.002, 0.001, 0.0005]
+    ]
+
+    for shape, num, alpha_k, alpha_s in product(*options):
+        print(shape, num, alpha_k, alpha_s)
+        cnn_config = {
+            "convolution": {"kernel_shapes":[shape] * num, "alpha":alpha_k},
+            "min_max_pool": {"pool_shape":(2,2), "strides":(2, 2)},
+            "soft_max":{"output_length":10, "alpha":alpha_s}
+        }
+        cnn = ConvNN(cnn_config, Xtrain.shape[1:])
+        losses = []
+        for k in range(3):
+            timer = Timer()
+            k_Xtrain = []
+            k_ytrain = []
+            for i, ks in enumerate(k_split):
+                if i == k:
+                    continue
+                k_ytrain.extend(ks[1])
+                k_Xtrain.append(ks[0])
+            k_Xtrain = np.concatenate(k_Xtrain)
+            print(k_Xtrain.shape)
+            timer.time("setup")
+            print("training")
+            for i, (X_batch, y_batch) in enumerate(batch_split(k_Xtrain, k_ytrain, 50)):
+                y_bars = cnn.forward_propagations(X_batch)
+                timer.time("forward")
+                cnn.backward_propagations(zip(y_bars, y_batch))
+                timer.time("backward")
+            print(cnn.layers[0].kernels)
+            print(cnn.layers[2].biases)
+            print("predicting")
+            y_bars = cnn.forward_propagations(k_split[k][0])
+            timer.time("predict")
+            loss = sum(map(
+                log_loss,
+                y_bars, k_split[k][1]
+            ))
+            timer.time("loss")
+            print(loss)
+            print(timer)
+            losses.append(loss)
+            break
+        break
+        
 
 
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
     # part_two(Xtrain)
-    part_three(Xtrain, ytrain, Xtest, ytest)
+    # part_three(Xtrain, ytrain, Xtest, ytest)
+    k_cross_validate(Xtrain, ytrain)
     # print(rc)
     # print(Xtrain.shape)
