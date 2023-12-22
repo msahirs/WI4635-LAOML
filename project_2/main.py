@@ -158,19 +158,22 @@ def part_three(Xtrain, ytrain, Xtest, ytest):
             loss_function="cross_entropy",
             epochs=1
         )
+
         model_weights = cnn.save()
+
         with open("models", 'a+b') as fp:
             pickle.dump(model_weights, fp)
+        print(model_weights)
+        # y_bars = cnn.forward_propagations(Xtest)
 
-        y_bars = cnn.forward_propagations(Xtest)
-
-        losses = map(
-            cnn.log_loss,
-            y_bars, ytest
-        )
-        print(sum(losses))
+        # losses = map(
+        #     cnn.log_loss,
+        #     y_bars, ytest
+        # )
+        # print(sum(losses))
         print(timer)
         print(rc)
+        break
 
 def k_cross_validate(Xtrain, ytrain):
     Xtrain_min = Xtrain.min()
@@ -242,22 +245,22 @@ def k_cross_validate(Xtrain, ytrain):
 
 def test_case():
     data = []
-    with open("k-fold_test", 'rb') as fr:
+    with open("models", 'rb') as fr:
         try:
             while True:
                 data.append(pickle.load(fr))
         except EOFError:
             pass
     for d in data:
-        print(d, sum(d["losses"])/3)
+        print(d)
     return data
 
 
 if __name__== "__main__":
-    # (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
+    (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
     # part_two(Xtrain)
-    # part_three(Xtrain, ytrain, Xtest, ytest)
+    part_three(Xtrain, ytrain, Xtest, ytest)
     # k_cross_validate(Xtrain, ytrain)
     test_case()
     # print(rc)
