@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import time
@@ -128,9 +129,9 @@ def to_one_hot_vector(y):
 def part_three(Xtrain, ytrain, Xtest, ytest):
     # Configs
     cnn_config = {
-        "convolution": {"kernel_shapes":[(3,3)] * 3, "alpha":0.02},
+        "convolution": {"kernel_shapes":[(5,5)] * 5, "alpha":0.005},
         "min_max_pool": {"pool_shape":(2,2), "strides":(2, 2)},
-        "soft_max":{"output_length":10, "alpha":0.001}
+        "soft_max":{"output_length":10, "alpha":0.002}
     }
     cnn = ConvNN(cnn_config, Xtrain.shape[1:])
     timer = Timer()
@@ -151,6 +152,7 @@ def part_three(Xtrain, ytrain, Xtest, ytest):
     ytest = list(map(to_one_hot_vector, ytest))
 
     for i in range(10):
+        timer.time("setup")
         cnn.train(
             Xtrain,
             ytrain,
@@ -158,12 +160,11 @@ def part_three(Xtrain, ytrain, Xtest, ytest):
             loss_function="cross_entropy",
             epochs=1
         )
-
+        timer.time("train")
         model_weights = cnn.save()
-
         with open("models", 'a+b') as fp:
             pickle.dump(model_weights, fp)
-        print(model_weights)
+        timer.time("save")
         # y_bars = cnn.forward_propagations(Xtest)
 
         # losses = map(
@@ -173,7 +174,6 @@ def part_three(Xtrain, ytrain, Xtest, ytest):
         # print(sum(losses))
         print(timer)
         print(rc)
-        break
 
 def k_cross_validate(Xtrain, ytrain):
     Xtrain_min = Xtrain.min()
@@ -240,12 +240,11 @@ def k_cross_validate(Xtrain, ytrain):
             "losses":losses
         }
         print(result)
-        with open("k-fold_test", 'a+b') as fp:
-            pickle.dump(result, fp)
+
 
 def test_case():
     data = []
-    with open("models", 'rb') as fr:
+    with open("k-fold_test", 'rb') as fr:
         try:
             while True:
                 data.append(pickle.load(fr))
@@ -255,13 +254,76 @@ def test_case():
         print(d)
     return data
 
+def model_test(Xtest, ytest):
+    Xtest_min = Xtest.min()
+    Xtest_max = Xtest.max()
+    Xtest = (Xtest - Xtest_min)/(Xtest_max - Xtest_min)
+    ytest = list(map(to_one_hot_vector, ytest))
+    data = []
+    test_vector = 1003
+    with open("models", 'rb') as fr:
+        try:
+            while True:
+                data.append(pickle.load(fr))
+        except EOFError:
+            pass
+    test_results = []
+    for i, d in enumerate(data):
+        c = ConvNN.load(d)
+        y_bars = list(c.forward_propagations(Xtest))
+
+        losses = map(
+            c.log_loss,
+            y_bars, ytest
+        )
+        test_results.append((i, sum(losses), y_bars[test_vector]))
+        print(test_results[-1])
+
+    with open("test_results", 'a+b') as fp:
+        pickle.dump(test_results, fp)
+
+def graph_model_test(Xtest):
+    data = []
+    with open("test_results", 'rb') as fr:
+        try:
+            while True:
+                data.extend(pickle.load(fr))
+        except EOFError:
+            pass
+    
+    pred_data = []
+    for d in data:
+        pred_data.extend([(d[0], i, p) for i, p in enumerate(d[2])])
+    pred_df = pd.DataFrame(pred_data, columns=["epoch", "number", "prediction"])
+    f, axs = plt.subplots()
+    sns.barplot(
+        data=pred_df,
+        hue="epoch",
+        x="number",
+        y="prediction",
+        ax=axs
+    )
+    f.savefig("predictions")
+    print(pred_df)
+    # df = pd.DataFrame(data, columns=["epoch", "cross_entropy", "prediction"])
+    # print(df)
+    # f, axs = plt.subplots()
+    # sns.lineplot(
+    #     data=df,
+    #     x="epoch",
+    #     y="cross_entropy",
+    #     ax=axs
+    # )
+    # f.savefig("cross_entropy")
 
 if __name__== "__main__":
     (Xtrain, ytrain), (Xtest,ytest) = tf.keras.datasets.mnist.load_data()
     # part_one(Xtrain[:5])
     # part_two(Xtrain)
-    part_three(Xtrain, ytrain, Xtest, ytest)
+    # part_three(Xtrain, ytrain, Xtest, ytest)
+    # model_test(Xtest, ytest)
+    graph_model_test(Xtest)
     # k_cross_validate(Xtrain, ytrain)
-    test_case()
+    # test_case()
     # print(rc)
     # print(Xtrain.shape)

@@ -321,6 +321,7 @@ class ConvNN:
         self.layers = []
         self.lay_names = []
         self.config = config
+        self.input_shape = input_shape
         for k, v in config.items():
             v.update({"input_shape":input_shape})
             self.layers.append(self.lay_map[k](**v))
@@ -386,14 +387,14 @@ class ConvNN:
             epoch += 1
 
     def save(self):
-        objs = [("NN", {"config":self.config, "input_shape":self.input_shape})] + [(name, lay.save_obj) for name, lay in zip(self.lay_name, self.layers)]
+        objs = [{"config":self.config, "input_shape":self.input_shape}] + [lay.save_obj() for lay in self.layers]
         return objs
         #write objs
     
     @classmethod
     def load(self, objs):
         init_vars = objs.pop(0)
-        new = ConvNN(**init_vars[1])
+        new = ConvNN(**init_vars)
         for lay, weights in zip(new.layers, objs):
             for k, v in weights.items():
                 setattr(lay, k, v)
